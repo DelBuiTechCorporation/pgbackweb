@@ -31,6 +31,7 @@ func (h *handlers) createBackupHandler(c echo.Context) error {
 		IsActive       string    `form:"is_active" validate:"required,oneof=true false"`
 		DestDir        string    `form:"dest_dir" validate:"required"`
 		RetentionDays  int16     `form:"retention_days"`
+		AllDatabases   string    `form:"all_databases" validate:"required,oneof=true false"`
 		OptDataOnly    string    `form:"opt_data_only" validate:"required,oneof=true false"`
 		OptSchemaOnly  string    `form:"opt_schema_only" validate:"required,oneof=true false"`
 		OptClean       string    `form:"opt_clean" validate:"required,oneof=true false"`
@@ -58,6 +59,7 @@ func (h *handlers) createBackupHandler(c echo.Context) error {
 			IsActive:       formData.IsActive == "true",
 			DestDir:        formData.DestDir,
 			RetentionDays:  formData.RetentionDays,
+			AllDatabases:   formData.AllDatabases == "true",
 			OptDataOnly:    formData.OptDataOnly == "true",
 			OptSchemaOnly:  formData.OptSchemaOnly == "true",
 			OptClean:       formData.OptClean == "true",
@@ -221,6 +223,17 @@ func createBackupForm(
 				nodx.Min("0"),
 				nodx.Max("36500"),
 			},
+		}),
+
+		component.SelectControl(component.SelectControlParams{
+			Name:     "all_databases",
+			Label:    "Backup all databases",
+			Required: true,
+			Children: []nodx.Node{
+				nodx.Option(nodx.Value("true"), nodx.Text("Yes")),
+				nodx.Option(nodx.Value("false"), nodx.Text("No"), nodx.Selected("")),
+			},
+			HelpText: "If yes, backup all non-template databases in the instance",
 		}),
 
 		component.SelectControl(component.SelectControlParams{

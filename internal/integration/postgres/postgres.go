@@ -5,8 +5,10 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/eduardolat/pgbackweb/internal/util/strutil"
 	"github.com/orsinium-labs/enum"
@@ -97,6 +99,28 @@ func (Client) Test(version PGVersion, connString string) error {
 	return nil
 }
 
+// ListDatabases lists all non-template databases in the PostgreSQL instance
+func (Client) ListDatabases(version PGVersion, connString string) ([]string, error) {
+	cmd := exec.Command(version.Value.PSQL, connString, "-At", "-c", "SELECT datname FROM pg_database WHERE datistemplate = false;")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error running psql list databases v%s: %s",
+			version.Value.Version, output,
+		)
+	}
+
+	var databases []string
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			databases = append(databases, trimmed)
+		}
+	}
+
+	return databases, nil
+}
+
 // DumpParams contains the parameters for the pg_dump command
 type DumpParams struct {
 	// DataOnly (--data-only): Dump only the data, not the schema (data definitions).
@@ -180,10 +204,10 @@ func (Client) Dump(
 
 // DumpZip runs the pg_dump command with the given parameters and returns the
 // ZIP-compressed SQL dump as an io.Reader.
+// If allDatabases is true, it will dump all non-template databases into separate files in the ZIP.
 func (c *Client) DumpZip(
-	version PGVersion, connString string, params ...DumpParams,
+	version PGVersion, connString string, allDatabases bool, params ...DumpParams,
 ) io.Reader {
-	dumpReader := c.Dump(version, connString, params...)
 	reader, writer := io.Pipe()
 
 	go func() {
@@ -192,15 +216,63 @@ func (c *Client) DumpZip(
 		zipWriter := zip.NewWriter(writer)
 		defer zipWriter.Close()
 
-		fileWriter, err := zipWriter.Create("dump.sql")
-		if err != nil {
-			writer.CloseWithError(fmt.Errorf("error creating zip file: %w", err))
-			return
-		}
+		if allDatabases {
+			// Parse the connection string to get base URL without dbname
+			u, err := url.Parse(connString)
+			if err != nil {
+				writer.CloseWithError(fmt.Errorf("error parsing connection string: %w", err))
+				return
+			}
+			baseConnString := u.String()
+			pathParts := strings.Split(u.Path, "/")
+			if len(pathParts) > 1 {
+				// Remove the dbname from path
+				u.Path = strings.Join(pathParts[:len(pathParts)-1], "/")
+				baseConnString = u.String()
+			}
 
-		if _, err := io.Copy(fileWriter, dumpReader); err != nil {
-			writer.CloseWithError(fmt.Errorf("error writing to zip file: %w", err))
-			return
+			// List all databases
+			databases, err := c.ListDatabases(version, connString)
+			if err != nil {
+				writer.CloseWithError(fmt.Errorf("error listing databases: %w", err))
+				return
+			}
+
+			// Dump each database
+			for _, db := range databases {
+				// Create connection string for this database
+				dbConnString := baseConnString
+				if strings.HasSuffix(baseConnString, "/") {
+					dbConnString += db
+				} else {
+					dbConnString += "/" + db
+				}
+
+				dumpReader := c.Dump(version, dbConnString, params...)
+				fileWriter, err := zipWriter.Create(db + ".sql")
+				if err != nil {
+					writer.CloseWithError(fmt.Errorf("error creating zip entry for %s: %w", db, err))
+					return
+				}
+
+				if _, err := io.Copy(fileWriter, dumpReader); err != nil {
+					writer.CloseWithError(fmt.Errorf("error writing dump for %s to zip: %w", db, err))
+					return
+				}
+			}
+		} else {
+			// Single database dump
+			dumpReader := c.Dump(version, connString, params...)
+			fileWriter, err := zipWriter.Create("dump.sql")
+			if err != nil {
+				writer.CloseWithError(fmt.Errorf("error creating zip file: %w", err))
+				return
+			}
+
+			if _, err := io.Copy(fileWriter, dumpReader); err != nil {
+				writer.CloseWithError(fmt.Errorf("error writing to zip file: %w", err))
+				return
+			}
 		}
 	}()
 

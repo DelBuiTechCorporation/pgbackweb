@@ -3,6 +3,7 @@ SELECT
   backups.is_active as backup_is_active,
   backups.is_local as backup_is_local,
   backups.dest_dir as backup_dest_dir,
+  backups.all_databases as backup_all_databases,
   backups.opt_data_only as backup_opt_data_only,
   backups.opt_schema_only as backup_opt_schema_only,
   backups.opt_clean as backup_opt_clean,
