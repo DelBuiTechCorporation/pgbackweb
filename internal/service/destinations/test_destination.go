@@ -38,7 +38,7 @@ func (s *Service) TestDestinationAndStoreResult(
 
 	err = s.TestDestination(
 		dest.DecryptedAccessKey, dest.DecryptedSecretKey, dest.Region,
-		dest.Endpoint, dest.BucketName,
+		dest.Endpoint, dest.BucketName, dest.ForcePathStyle,
 	)
 	if err != nil && dest.TestOk.Valid && dest.TestOk.Bool {
 		s.webhooksService.RunDestinationUnhealthy(dest.ID)
@@ -54,9 +54,9 @@ func (s *Service) TestDestinationAndStoreResult(
 }
 
 func (s *Service) TestDestination(
-	accessKey, secretKey, region, endpoint, bucketName string,
+	accessKey, secretKey, region, endpoint, bucketName string, forcePathStyle bool,
 ) error {
-	err := s.ints.StorageClient.S3Test(accessKey, secretKey, region, endpoint, bucketName)
+	err := s.ints.StorageClient.S3Test(accessKey, secretKey, region, endpoint, bucketName, forcePathStyle)
 	if err != nil {
 		return fmt.Errorf("error testing destination: %w", err)
 	}
