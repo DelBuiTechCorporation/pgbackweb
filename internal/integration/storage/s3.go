@@ -29,12 +29,13 @@ func createS3Client(
 		return aws.Endpoint{
 			HostnameImmutable: true,
 			URL:               endpoint,
+			SigningRegion:     region,
 		}, nil
 	})
 
 	//nolint:all
 	conf, err := config.LoadDefaultConfig(
-		context.TODO(),
+		context.Background(),
 		config.WithRegion(region),
 		config.WithEndpointResolver(endpointResolver),
 		config.WithCredentialsProvider(credentialsProvider),
