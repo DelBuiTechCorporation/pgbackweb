@@ -37,6 +37,7 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 		OptIfExists    string `form:"opt_if_exists" validate:"required,oneof=true false"`
 		OptCreate      string `form:"opt_create" validate:"required,oneof=true false"`
 		OptNoComments  string `form:"opt_no_comments" validate:"required,oneof=true false"`
+		ZipPassword    string `form:"zip_password"`
 	}
 	if err := c.Bind(&formData); err != nil {
 		return respondhtmx.ToastError(c, err.Error())
@@ -60,6 +61,7 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 			OptIfExists:    sql.NullBool{Bool: formData.OptIfExists == "true", Valid: true},
 			OptCreate:      sql.NullBool{Bool: formData.OptCreate == "true", Valid: true},
 			OptNoComments:  sql.NullBool{Bool: formData.OptNoComments == "true", Valid: true},
+			ZipPassword:    sql.NullString{String: formData.ZipPassword, Valid: formData.ZipPassword != ""},
 		},
 	)
 	if err != nil {
@@ -248,6 +250,14 @@ func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
 						}),
 					),
 				),
+
+				component.InputControl(component.InputControlParams{
+					Name:        "zip_password",
+					Label:       "ZIP password",
+					Placeholder: "Optional password for ZIP file",
+					Type:        component.InputTypePassword,
+					HelpText:    "Password to protect the ZIP file (leave empty for no password)",
+				}),
 
 				nodx.Div(
 					nodx.Class("flex justify-end items-center space-x-2 pt-2"),

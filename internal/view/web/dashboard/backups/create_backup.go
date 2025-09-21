@@ -38,6 +38,7 @@ func (h *handlers) createBackupHandler(c echo.Context) error {
 		OptIfExists    string    `form:"opt_if_exists" validate:"required,oneof=true false"`
 		OptCreate      string    `form:"opt_create" validate:"required,oneof=true false"`
 		OptNoComments  string    `form:"opt_no_comments" validate:"required,oneof=true false"`
+		ZipPassword    string    `form:"zip_password"`
 	}
 	if err := c.Bind(&formData); err != nil {
 		return respondhtmx.ToastError(c, err.Error())
@@ -66,6 +67,7 @@ func (h *handlers) createBackupHandler(c echo.Context) error {
 			OptIfExists:    formData.OptIfExists == "true",
 			OptCreate:      formData.OptCreate == "true",
 			OptNoComments:  formData.OptNoComments == "true",
+			ZipPassword:    formData.ZipPassword,
 		},
 	)
 	if err != nil {
@@ -314,6 +316,14 @@ func createBackupForm(
 					},
 				}),
 			),
+
+			component.InputControl(component.InputControlParams{
+				Name:        "zip_password",
+				Label:       "ZIP password",
+				Placeholder: "Optional password for ZIP file",
+				Type:        component.InputTypePassword,
+				HelpText:    "Password to protect the ZIP file (leave empty for no password)",
+			}),
 		),
 
 		nodx.Div(

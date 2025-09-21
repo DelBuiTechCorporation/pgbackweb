@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/eduardolat/pgbackweb/internal/util/strutil"
@@ -205,16 +206,22 @@ func (Client) Dump(
 // DumpZip runs the pg_dump command with the given parameters and returns the
 // ZIP-compressed SQL dump as an io.Reader.
 // If allDatabases is true, it will dump all non-template databases into separate files in the ZIP.
+// If zipPassword is provided, the ZIP will be password-protected.
 func (c *Client) DumpZip(
-	version PGVersion, connString string, allDatabases bool, params ...DumpParams,
+	version PGVersion, connString string, allDatabases bool, zipPassword string, params ...DumpParams,
 ) io.Reader {
 	reader, writer := io.Pipe()
 
 	go func() {
 		defer writer.Close()
 
-		zipWriter := zip.NewWriter(writer)
-		defer zipWriter.Close()
+		// Create temp directory for SQL files
+		tempDir, err := os.MkdirTemp("", "pbw-dump-*")
+		if err != nil {
+			writer.CloseWithError(fmt.Errorf("error creating temp dir: %w", err))
+			return
+		}
+		defer os.RemoveAll(tempDir)
 
 		if allDatabases {
 			// Parse the connection string to get base URL without dbname
@@ -238,7 +245,8 @@ func (c *Client) DumpZip(
 				return
 			}
 
-			// Dump each database
+			// Dump each database to temp files
+			sqlFiles := make([]string, 0, len(databases))
 			for _, db := range databases {
 				// Create connection string for this database
 				dbConnString := baseConnString
@@ -249,28 +257,51 @@ func (c *Client) DumpZip(
 				}
 
 				dumpReader := c.Dump(version, dbConnString, params...)
-				fileWriter, err := zipWriter.Create(db + ".sql")
+				sqlPath := strutil.CreatePath(true, tempDir, db+".sql")
+				sqlFiles = append(sqlFiles, sqlPath)
+
+				sqlFile, err := os.Create(sqlPath)
 				if err != nil {
-					writer.CloseWithError(fmt.Errorf("error creating zip entry for %s: %w", db, err))
+					writer.CloseWithError(fmt.Errorf("error creating temp SQL file for %s: %w", db, err))
 					return
 				}
 
-				if _, err := io.Copy(fileWriter, dumpReader); err != nil {
-					writer.CloseWithError(fmt.Errorf("error writing dump for %s to zip: %w", db, err))
+				if _, err := io.Copy(sqlFile, dumpReader); err != nil {
+					sqlFile.Close()
+					writer.CloseWithError(fmt.Errorf("error writing dump for %s: %w", db, err))
 					return
 				}
+				sqlFile.Close()
 			}
-		} else {
-			// Single database dump
-			dumpReader := c.Dump(version, connString, params...)
-			fileWriter, err := zipWriter.Create("dump.sql")
-			if err != nil {
-				writer.CloseWithError(fmt.Errorf("error creating zip file: %w", err))
+
+			// Create ZIP with all SQL files
+			if err := c.createZipWithPassword(writer, tempDir, sqlFiles, zipPassword); err != nil {
+				writer.CloseWithError(fmt.Errorf("error creating ZIP: %w", err))
 				return
 			}
 
-			if _, err := io.Copy(fileWriter, dumpReader); err != nil {
-				writer.CloseWithError(fmt.Errorf("error writing to zip file: %w", err))
+		} else {
+			// Single database dump
+			dumpReader := c.Dump(version, connString, params...)
+			sqlPath := strutil.CreatePath(true, tempDir, "dump.sql")
+
+			sqlFile, err := os.Create(sqlPath)
+			if err != nil {
+				writer.CloseWithError(fmt.Errorf("error creating temp SQL file: %w", err))
+				return
+			}
+
+			if _, err := io.Copy(sqlFile, dumpReader); err != nil {
+				sqlFile.Close()
+				writer.CloseWithError(fmt.Errorf("error writing dump: %w", err))
+				return
+			}
+			sqlFile.Close()
+
+			// Create ZIP with single SQL file
+			sqlFiles := []string{sqlPath}
+			if err := c.createZipWithPassword(writer, tempDir, sqlFiles, zipPassword); err != nil {
+				writer.CloseWithError(fmt.Errorf("error creating ZIP: %w", err))
 				return
 			}
 		}
@@ -329,13 +360,53 @@ func (Client) RestoreZip(
 		return fmt.Errorf("dump.sql file not found in ZIP file: %s", zipPath)
 	}
 
-	cmd = exec.Command(version.Value.PSQL, connString, "-f", dumpPath)
-	output, err = cmd.CombinedOutput()
-	if err != nil {
 		return fmt.Errorf(
 			"error running psql v%s command: %s",
 			version.Value.Version, output,
 		)
+	}
+
+	return nil
+}
+
+// createZipWithPassword creates a ZIP file with optional password protection using the system zip command
+func (c *Client) createZipWithPassword(writer io.Writer, tempDir string, sqlFiles []string, zipPassword string) error {
+	// Create a temporary ZIP file
+	zipPath := strutil.CreatePath(true, tempDir, "dump.zip")
+
+	// Build zip command arguments
+	args := []string{"-r", zipPath, "."}
+	for _, file := range sqlFiles {
+		// Get relative path from tempDir
+		relPath, err := filepath.Rel(tempDir, file)
+		if err != nil {
+			return fmt.Errorf("error getting relative path: %w", err)
+		}
+		args = append(args, relPath)
+	}
+
+	// Add password if provided
+	if zipPassword != "" {
+		args = append([]string{"-P", zipPassword}, args...)
+	}
+
+	// Run zip command
+	cmd := exec.Command("zip", args...)
+	cmd.Dir = tempDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("error creating ZIP file: %s", output)
+	}
+
+	// Read the ZIP file and write to the writer
+	zipFile, err := os.Open(zipPath)
+	if err != nil {
+		return fmt.Errorf("error opening ZIP file: %w", err)
+	}
+	defer zipFile.Close()
+
+	if _, err := io.Copy(writer, zipFile); err != nil {
+		return fmt.Errorf("error writing ZIP to output: %w", err)
 	}
 
 	return nil

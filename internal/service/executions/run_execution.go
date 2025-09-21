@@ -98,7 +98,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 	}
 
 	dumpReader := s.ints.PGClient.DumpZip(
-		pgVersion, back.DecryptedDatabaseConnectionString, back.BackupAllDatabases, postgres.DumpParams{
+		pgVersion, back.DecryptedDatabaseConnectionString, back.BackupAllDatabases, back.DecryptedBackupZipPassword, postgres.DumpParams{
 			DataOnly:   back.BackupOptDataOnly,
 			SchemaOnly: back.BackupOptSchemaOnly,
 			Clean:      back.BackupOptClean,
