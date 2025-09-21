@@ -43,13 +43,11 @@ func createS3Client(
 		return nil, fmt.Errorf("error initializing storage config: %w", err)
 	}
 
-	if forcePathStyle {
-		conf.S3 = &aws.S3Config{
-			AddressingStyle: aws.AddressingStylePath,
+	s3Client := s3.NewFromConfig(conf, func(o *s3.Options) {
+		if forcePathStyle {
+			o.UsePathStyle = true
 		}
-	}
-
-	s3Client := s3.NewFromConfig(conf)
+	})
 	return s3Client, nil
 }
 
