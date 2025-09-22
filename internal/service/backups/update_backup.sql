@@ -12,6 +12,11 @@ SET
   opt_clean = COALESCE(sqlc.narg('opt_clean'), opt_clean),
   opt_if_exists = COALESCE(sqlc.narg('opt_if_exists'), opt_if_exists),
   opt_create = COALESCE(sqlc.narg('opt_create'), opt_create),
-  opt_no_comments = COALESCE(sqlc.narg('opt_no_comments'), opt_no_comments)
+  opt_no_comments = COALESCE(sqlc.narg('opt_no_comments'), opt_no_comments),
+  zip_password = CASE
+    WHEN sqlc.narg('zip_password')::TEXT IS NULL THEN zip_password
+    WHEN sqlc.narg('zip_password')::TEXT = '' THEN NULL
+    ELSE pgp_sym_encrypt(sqlc.narg('zip_password')::TEXT, sqlc.arg('encryption_key')::TEXT)
+  END
 WHERE id = @id
 RETURNING *;

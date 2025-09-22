@@ -15,6 +15,8 @@ func (s *Service) CreateBackup(
 		return dbgen.Backup{}, fmt.Errorf("invalid cron expression")
 	}
 
+	params.EncryptionKey = s.env.PBW_ENCRYPTION_KEY
+
 	backup, err := s.dbgen.BackupsServiceCreateBackup(ctx, params)
 	if err != nil {
 		return backup, err
