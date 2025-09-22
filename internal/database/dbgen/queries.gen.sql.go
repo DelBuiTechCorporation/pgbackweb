@@ -18,6 +18,7 @@ const authServiceDeleteAllUserSessions = `-- name: AuthServiceDeleteAllUserSessi
 DELETE FROM sessions WHERE user_id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/delete_all_user_sessions.sql
 func (q *Queries) AuthServiceDeleteAllUserSessions(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, authServiceDeleteAllUserSessions, userID)
 	return err
@@ -27,6 +28,7 @@ const authServiceDeleteOldSessions = `-- name: AuthServiceDeleteOldSessions :exe
 DELETE FROM sessions WHERE created_at <= $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/delete_old_sessions.sql
 func (q *Queries) AuthServiceDeleteOldSessions(ctx context.Context, dateThreshold time.Time) error {
 	_, err := q.db.ExecContext(ctx, authServiceDeleteOldSessions, dateThreshold)
 	return err
@@ -36,6 +38,7 @@ const authServiceDeleteSession = `-- name: AuthServiceDeleteSession :exec
 DELETE FROM sessions WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/delete_session.sql
 func (q *Queries) AuthServiceDeleteSession(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, authServiceDeleteSession, id)
 	return err
@@ -65,6 +68,7 @@ type AuthServiceGetUserByTokenRow struct {
 	SessionID uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/get_user_by_token.sql
 func (q *Queries) AuthServiceGetUserByToken(ctx context.Context, arg AuthServiceGetUserByTokenParams) (AuthServiceGetUserByTokenRow, error) {
 	row := q.db.QueryRowContext(ctx, authServiceGetUserByToken, arg.EncryptionKey, arg.Token)
 	var i AuthServiceGetUserByTokenRow
@@ -84,6 +88,7 @@ const authServiceGetUserSessions = `-- name: AuthServiceGetUserSessions :many
 SELECT id, user_id, token, ip, user_agent, created_at FROM sessions WHERE user_id = $1 ORDER BY created_at DESC
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/get_user_sessions.sql
 func (q *Queries) AuthServiceGetUserSessions(ctx context.Context, userID uuid.UUID) ([]Session, error) {
 	rows, err := q.db.QueryContext(ctx, authServiceGetUserSessions, userID)
 	if err != nil {
@@ -140,6 +145,7 @@ type AuthServiceLoginCreateSessionRow struct {
 	DecryptedToken string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/login.sql
 func (q *Queries) AuthServiceLoginCreateSession(ctx context.Context, arg AuthServiceLoginCreateSessionParams) (AuthServiceLoginCreateSessionRow, error) {
 	row := q.db.QueryRowContext(ctx, authServiceLoginCreateSession,
 		arg.UserID,
@@ -165,6 +171,7 @@ const authServiceLoginGetUserByEmail = `-- name: AuthServiceLoginGetUserByEmail 
 SELECT id, name, email, password, created_at, updated_at FROM users WHERE email = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/auth/login.sql
 func (q *Queries) AuthServiceLoginGetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRowContext(ctx, authServiceLoginGetUserByEmail, email)
 	var i User
@@ -218,6 +225,7 @@ type BackupsServiceCreateBackupParams struct {
 	EncryptionKey  string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/create_backup.sql
 func (q *Queries) BackupsServiceCreateBackup(ctx context.Context, arg BackupsServiceCreateBackupParams) (Backup, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceCreateBackup,
 		arg.DatabaseID,
@@ -270,6 +278,7 @@ DELETE FROM backups
 WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/delete_backup.sql
 func (q *Queries) BackupsServiceDeleteBackup(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, backupsServiceDeleteBackup, id)
 	return err
@@ -290,6 +299,7 @@ WHERE backups.id = $1
 RETURNING id, database_id, destination_id, name, cron_expression, time_zone, is_active, dest_dir, retention_days, opt_data_only, opt_schema_only, opt_clean, opt_if_exists, opt_create, opt_no_comments, created_at, updated_at, is_local, all_databases, zip_password
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/duplicate_backup.sql
 func (q *Queries) BackupsServiceDuplicateBackup(ctx context.Context, backupID uuid.UUID) (Backup, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceDuplicateBackup, backupID)
 	var i Backup
@@ -323,6 +333,7 @@ SELECT id, database_id, destination_id, name, cron_expression, time_zone, is_act
 ORDER BY created_at DESC
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/get_all_backups.sql
 func (q *Queries) BackupsServiceGetAllBackups(ctx context.Context) ([]Backup, error) {
 	rows, err := q.db.QueryContext(ctx, backupsServiceGetAllBackups)
 	if err != nil {
@@ -372,6 +383,7 @@ SELECT id, database_id, destination_id, name, cron_expression, time_zone, is_act
 WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/get_backup.sql
 func (q *Queries) BackupsServiceGetBackup(ctx context.Context, id uuid.UUID) (Backup, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceGetBackup, id)
 	var i Backup
@@ -414,6 +426,7 @@ type BackupsServiceGetBackupsQtyRow struct {
 	Inactive int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/get_backups_qty.sql
 func (q *Queries) BackupsServiceGetBackupsQty(ctx context.Context) (BackupsServiceGetBackupsQtyRow, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceGetBackupsQty)
 	var i BackupsServiceGetBackupsQtyRow
@@ -438,6 +451,7 @@ type BackupsServiceGetScheduleAllDataRow struct {
 	TimeZone       string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/schedule_all.sql
 func (q *Queries) BackupsServiceGetScheduleAllData(ctx context.Context) ([]BackupsServiceGetScheduleAllDataRow, error) {
 	rows, err := q.db.QueryContext(ctx, backupsServiceGetScheduleAllData)
 	if err != nil {
@@ -508,6 +522,7 @@ type BackupsServicePaginateBackupsRow struct {
 	DestinationName sql.NullString
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/paginate_backups.sql
 func (q *Queries) BackupsServicePaginateBackups(ctx context.Context, arg BackupsServicePaginateBackupsParams) ([]BackupsServicePaginateBackupsRow, error) {
 	rows, err := q.db.QueryContext(ctx, backupsServicePaginateBackups, arg.Offset, arg.Limit)
 	if err != nil {
@@ -558,6 +573,7 @@ const backupsServicePaginateBackupsCount = `-- name: BackupsServicePaginateBacku
 SELECT COUNT(*) FROM backups
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/paginate_backups.sql
 func (q *Queries) BackupsServicePaginateBackupsCount(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, backupsServicePaginateBackupsCount)
 	var count int64
@@ -572,6 +588,7 @@ WHERE id = $1
 RETURNING id, database_id, destination_id, name, cron_expression, time_zone, is_active, dest_dir, retention_days, opt_data_only, opt_schema_only, opt_clean, opt_if_exists, opt_create, opt_no_comments, created_at, updated_at, is_local, all_databases, zip_password
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/toggle_is_active.sql
 func (q *Queries) BackupsServiceToggleIsActive(ctx context.Context, backupID uuid.UUID) (Backup, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceToggleIsActive, backupID)
 	var i Backup
@@ -650,6 +667,7 @@ type BackupsServiceUpdateBackupParams struct {
 	ID             uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/backups/update_backup.sql
 func (q *Queries) BackupsServiceUpdateBackup(ctx context.Context, arg BackupsServiceUpdateBackupParams) (Backup, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceUpdateBackup,
 		arg.DatabaseID,
@@ -715,6 +733,7 @@ type DatabasesServiceCreateDatabaseParams struct {
 	PgVersion        string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/create_database.sql
 func (q *Queries) DatabasesServiceCreateDatabase(ctx context.Context, arg DatabasesServiceCreateDatabaseParams) (Database, error) {
 	row := q.db.QueryRowContext(ctx, databasesServiceCreateDatabase,
 		arg.Name,
@@ -742,6 +761,7 @@ DELETE FROM databases
 WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/delete_database.sql
 func (q *Queries) DatabasesServiceDeleteDatabase(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, databasesServiceDeleteDatabase, id)
 	return err
@@ -768,6 +788,7 @@ type DatabasesServiceGetAllDatabasesRow struct {
 	DecryptedConnectionString string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/get_all_databases.sql
 func (q *Queries) DatabasesServiceGetAllDatabases(ctx context.Context, encryptionKey string) ([]DatabasesServiceGetAllDatabasesRow, error) {
 	rows, err := q.db.QueryContext(ctx, databasesServiceGetAllDatabases, encryptionKey)
 	if err != nil {
@@ -828,6 +849,7 @@ type DatabasesServiceGetDatabaseRow struct {
 	DecryptedConnectionString string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/get_database.sql
 func (q *Queries) DatabasesServiceGetDatabase(ctx context.Context, arg DatabasesServiceGetDatabaseParams) (DatabasesServiceGetDatabaseRow, error) {
 	row := q.db.QueryRowContext(ctx, databasesServiceGetDatabase, arg.EncryptionKey, arg.ID)
 	var i DatabasesServiceGetDatabaseRow
@@ -860,6 +882,7 @@ type DatabasesServiceGetDatabasesQtyRow struct {
 	Unhealthy int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/get_databases_qty.sql
 func (q *Queries) DatabasesServiceGetDatabasesQty(ctx context.Context) (DatabasesServiceGetDatabasesQtyRow, error) {
 	row := q.db.QueryRowContext(ctx, databasesServiceGetDatabasesQty)
 	var i DatabasesServiceGetDatabasesQtyRow
@@ -895,6 +918,7 @@ type DatabasesServicePaginateDatabasesRow struct {
 	DecryptedConnectionString string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/paginate_databases.sql
 func (q *Queries) DatabasesServicePaginateDatabases(ctx context.Context, arg DatabasesServicePaginateDatabasesParams) ([]DatabasesServicePaginateDatabasesRow, error) {
 	rows, err := q.db.QueryContext(ctx, databasesServicePaginateDatabases, arg.EncryptionKey, arg.Offset, arg.Limit)
 	if err != nil {
@@ -933,6 +957,7 @@ const databasesServicePaginateDatabasesCount = `-- name: DatabasesServicePaginat
 SELECT COUNT(*) FROM databases
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/paginate_databases.sql
 func (q *Queries) DatabasesServicePaginateDatabasesCount(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, databasesServicePaginateDatabasesCount)
 	var count int64
@@ -954,6 +979,7 @@ type DatabasesServiceSetTestDataParams struct {
 	DatabaseID uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/test_database.sql
 func (q *Queries) DatabasesServiceSetTestData(ctx context.Context, arg DatabasesServiceSetTestDataParams) error {
 	_, err := q.db.ExecContext(ctx, databasesServiceSetTestData, arg.TestOk, arg.TestError, arg.DatabaseID)
 	return err
@@ -983,6 +1009,7 @@ type DatabasesServiceUpdateDatabaseParams struct {
 	ID               uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/databases/update_database.sql
 func (q *Queries) DatabasesServiceUpdateDatabase(ctx context.Context, arg DatabasesServiceUpdateDatabaseParams) (Database, error) {
 	row := q.db.QueryRowContext(ctx, databasesServiceUpdateDatabase,
 		arg.Name,
@@ -1029,6 +1056,7 @@ type DestinationsServiceCreateDestinationParams struct {
 	SecretKey     string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/create_destination.sql
 func (q *Queries) DestinationsServiceCreateDestination(ctx context.Context, arg DestinationsServiceCreateDestinationParams) (Destination, error) {
 	row := q.db.QueryRowContext(ctx, destinationsServiceCreateDestination,
 		arg.Name,
@@ -1062,6 +1090,7 @@ DELETE FROM destinations
 WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/delete_destination.sql
 func (q *Queries) DestinationsServiceDeleteDestination(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, destinationsServiceDeleteDestination, id)
 	return err
@@ -1093,6 +1122,7 @@ type DestinationsServiceGetAllDestinationsRow struct {
 	DecryptedSecretKey string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/get_all_destinations.sql
 func (q *Queries) DestinationsServiceGetAllDestinations(ctx context.Context, encryptionKey string) ([]DestinationsServiceGetAllDestinationsRow, error) {
 	rows, err := q.db.QueryContext(ctx, destinationsServiceGetAllDestinations, encryptionKey)
 	if err != nil {
@@ -1162,6 +1192,7 @@ type DestinationsServiceGetDestinationRow struct {
 	DecryptedSecretKey string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/get_destination.sql
 func (q *Queries) DestinationsServiceGetDestination(ctx context.Context, arg DestinationsServiceGetDestinationParams) (DestinationsServiceGetDestinationRow, error) {
 	row := q.db.QueryRowContext(ctx, destinationsServiceGetDestination, arg.EncryptionKey, arg.ID)
 	var i DestinationsServiceGetDestinationRow
@@ -1198,6 +1229,7 @@ type DestinationsServiceGetDestinationsQtyRow struct {
 	Unhealthy int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/get_destinations_qty.sql
 func (q *Queries) DestinationsServiceGetDestinationsQty(ctx context.Context) (DestinationsServiceGetDestinationsQtyRow, error) {
 	row := q.db.QueryRowContext(ctx, destinationsServiceGetDestinationsQty)
 	var i DestinationsServiceGetDestinationsQtyRow
@@ -1238,6 +1270,7 @@ type DestinationsServicePaginateDestinationsRow struct {
 	DecryptedSecretKey string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/paginate_destinations.sql
 func (q *Queries) DestinationsServicePaginateDestinations(ctx context.Context, arg DestinationsServicePaginateDestinationsParams) ([]DestinationsServicePaginateDestinationsRow, error) {
 	rows, err := q.db.QueryContext(ctx, destinationsServicePaginateDestinations, arg.EncryptionKey, arg.Offset, arg.Limit)
 	if err != nil {
@@ -1280,6 +1313,7 @@ const destinationsServicePaginateDestinationsCount = `-- name: DestinationsServi
 SELECT COUNT(*) FROM destinations
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/paginate_destinations.sql
 func (q *Queries) DestinationsServicePaginateDestinationsCount(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, destinationsServicePaginateDestinationsCount)
 	var count int64
@@ -1301,12 +1335,14 @@ type DestinationsServiceSetTestDataParams struct {
 	DestinationID uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/test_destination.sql
 func (q *Queries) DestinationsServiceSetTestData(ctx context.Context, arg DestinationsServiceSetTestDataParams) error {
 	_, err := q.db.ExecContext(ctx, destinationsServiceSetTestData, arg.TestOk, arg.TestError, arg.DestinationID)
 	return err
 }
 
 const destinationsServiceUpdateDestination = `-- name: DestinationsServiceUpdateDestination :one
+
 UPDATE destinations
 SET
   name = COALESCE($1, name),
@@ -1338,6 +1374,8 @@ type DestinationsServiceUpdateDestinationParams struct {
 	ID            uuid.UUID
 }
 
+// This file is auto-generated by /mnt/a/__Github/pgbackweb/scripts/sqlc-prebuild.ts. DO NOT EDIT.
+// file: /mnt/a/__Github/pgbackweb/internal/service/destinations/update_destination.sql
 func (q *Queries) DestinationsServiceUpdateDestination(ctx context.Context, arg DestinationsServiceUpdateDestinationParams) (Destination, error) {
 	row := q.db.QueryRowContext(ctx, destinationsServiceUpdateDestination,
 		arg.Name,
@@ -1380,6 +1418,7 @@ type ExecutionsServiceCreateExecutionParams struct {
 	Path     sql.NullString
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/create_execution.sql
 func (q *Queries) ExecutionsServiceCreateExecution(ctx context.Context, arg ExecutionsServiceCreateExecutionParams) (Execution, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceCreateExecution,
 		arg.BackupID,
@@ -1414,6 +1453,13 @@ SELECT
   backups.opt_if_exists as backup_opt_if_exists,
   backups.opt_create as backup_opt_create,
   backups.opt_no_comments as backup_opt_no_comments,
+  backups.all_databases as backup_all_databases,
+  (
+    CASE WHEN backups.zip_password IS NOT NULL
+    THEN pgp_sym_decrypt(backups.zip_password, $1)
+    ELSE ''
+    END
+  ) AS decrypted_backup_zip_password,
 
   pgp_sym_decrypt(databases.connection_string, $1) AS decrypted_database_connection_string,
   databases.pg_version as database_pg_version,
@@ -1454,6 +1500,8 @@ type ExecutionsServiceGetBackupDataRow struct {
 	BackupOptIfExists                 bool
 	BackupOptCreate                   bool
 	BackupOptNoComments               bool
+	BackupAllDatabases                bool
+	DecryptedBackupZipPassword        string
 	DecryptedDatabaseConnectionString string
 	DatabasePgVersion                 string
 	DestinationBucketName             sql.NullString
@@ -1463,6 +1511,7 @@ type ExecutionsServiceGetBackupDataRow struct {
 	DecryptedDestinationSecretKey     string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/run_execution.sql
 func (q *Queries) ExecutionsServiceGetBackupData(ctx context.Context, arg ExecutionsServiceGetBackupDataParams) (ExecutionsServiceGetBackupDataRow, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceGetBackupData, arg.EncryptionKey, arg.BackupID)
 	var i ExecutionsServiceGetBackupDataRow
@@ -1476,6 +1525,8 @@ func (q *Queries) ExecutionsServiceGetBackupData(ctx context.Context, arg Execut
 		&i.BackupOptIfExists,
 		&i.BackupOptCreate,
 		&i.BackupOptNoComments,
+		&i.BackupAllDatabases,
+		&i.DecryptedBackupZipPassword,
 		&i.DecryptedDatabaseConnectionString,
 		&i.DatabasePgVersion,
 		&i.DestinationBucketName,
@@ -1529,6 +1580,7 @@ type ExecutionsServiceGetDownloadLinkOrPathDataRow struct {
 	DecryptedSecretKey  string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/get_execution_download_link_or_path.sql
 func (q *Queries) ExecutionsServiceGetDownloadLinkOrPathData(ctx context.Context, arg ExecutionsServiceGetDownloadLinkOrPathDataParams) (ExecutionsServiceGetDownloadLinkOrPathDataRow, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceGetDownloadLinkOrPathData, arg.DecryptionKey, arg.ExecutionID)
 	var i ExecutionsServiceGetDownloadLinkOrPathDataRow
@@ -1571,6 +1623,7 @@ type ExecutionsServiceGetExecutionRow struct {
 	DatabasePgVersion string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/get_execution.sql
 func (q *Queries) ExecutionsServiceGetExecution(ctx context.Context, id uuid.UUID) (ExecutionsServiceGetExecutionRow, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceGetExecution, id)
 	var i ExecutionsServiceGetExecutionRow
@@ -1637,6 +1690,7 @@ type ExecutionsServiceGetExecutionForSoftDeleteRow struct {
 	DecryptedDestinationSecretKey string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/soft_delete_execution.sql
 func (q *Queries) ExecutionsServiceGetExecutionForSoftDelete(ctx context.Context, arg ExecutionsServiceGetExecutionForSoftDeleteParams) (ExecutionsServiceGetExecutionForSoftDeleteRow, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceGetExecutionForSoftDelete, arg.EncryptionKey, arg.ExecutionID)
 	var i ExecutionsServiceGetExecutionForSoftDeleteRow
@@ -1672,6 +1726,7 @@ type ExecutionsServiceGetExecutionsQtyRow struct {
 	Deleted int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/get_executions_qty.sql
 func (q *Queries) ExecutionsServiceGetExecutionsQty(ctx context.Context) (ExecutionsServiceGetExecutionsQtyRow, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceGetExecutionsQty)
 	var i ExecutionsServiceGetExecutionsQtyRow
@@ -1698,6 +1753,7 @@ WHERE
   ) < NOW()
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/soft_delete_expired_executions.sql
 func (q *Queries) ExecutionsServiceGetExpiredExecutions(ctx context.Context) ([]Execution, error) {
 	rows, err := q.db.QueryContext(ctx, executionsServiceGetExpiredExecutions)
 	if err != nil {
@@ -1738,6 +1794,7 @@ WHERE backup_id = $1
 ORDER BY started_at DESC
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/list_backup_executions.sql
 func (q *Queries) ExecutionsServiceListBackupExecutions(ctx context.Context, backupID uuid.UUID) ([]Execution, error) {
 	rows, err := q.db.QueryContext(ctx, executionsServiceListBackupExecutions, backupID)
 	if err != nil {
@@ -1832,6 +1889,7 @@ type ExecutionsServicePaginateExecutionsRow struct {
 	BackupIsLocal     bool
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/paginate_executions.sql
 func (q *Queries) ExecutionsServicePaginateExecutions(ctx context.Context, arg ExecutionsServicePaginateExecutionsParams) ([]ExecutionsServicePaginateExecutionsRow, error) {
 	rows, err := q.db.QueryContext(ctx, executionsServicePaginateExecutions,
 		arg.BackupID,
@@ -1909,6 +1967,7 @@ type ExecutionsServicePaginateExecutionsCountParams struct {
 	DestinationID uuid.NullUUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/paginate_executions.sql
 func (q *Queries) ExecutionsServicePaginateExecutionsCount(ctx context.Context, arg ExecutionsServicePaginateExecutionsCountParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, executionsServicePaginateExecutionsCount, arg.BackupID, arg.DatabaseID, arg.DestinationID)
 	var count int64
@@ -1924,6 +1983,7 @@ SET
 WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/soft_delete_execution.sql
 func (q *Queries) ExecutionsServiceSoftDeleteExecution(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, executionsServiceSoftDeleteExecution, id)
 	return err
@@ -1952,6 +2012,7 @@ type ExecutionsServiceUpdateExecutionParams struct {
 	ID         uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/executions/update_execution.sql
 func (q *Queries) ExecutionsServiceUpdateExecution(ctx context.Context, arg ExecutionsServiceUpdateExecutionParams) (Execution, error) {
 	row := q.db.QueryRowContext(ctx, executionsServiceUpdateExecution,
 		arg.Status,
@@ -1991,6 +2052,7 @@ type RestorationsServiceCreateRestorationParams struct {
 	Message     sql.NullString
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/restorations/create_restoration.sql
 func (q *Queries) RestorationsServiceCreateRestoration(ctx context.Context, arg RestorationsServiceCreateRestorationParams) (Restoration, error) {
 	row := q.db.QueryRowContext(ctx, restorationsServiceCreateRestoration,
 		arg.ExecutionID,
@@ -2028,6 +2090,7 @@ type RestorationsServiceGetRestorationsQtyRow struct {
 	Failed  int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/restorations/get_restorations_qty.sql
 func (q *Queries) RestorationsServiceGetRestorationsQty(ctx context.Context) (RestorationsServiceGetRestorationsQtyRow, error) {
 	row := q.db.QueryRowContext(ctx, restorationsServiceGetRestorationsQty)
 	var i RestorationsServiceGetRestorationsQtyRow
@@ -2085,6 +2148,7 @@ type RestorationsServicePaginateRestorationsRow struct {
 	BackupName   string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/restorations/paginate_restorations.sql
 func (q *Queries) RestorationsServicePaginateRestorations(ctx context.Context, arg RestorationsServicePaginateRestorationsParams) ([]RestorationsServicePaginateRestorationsRow, error) {
 	rows, err := q.db.QueryContext(ctx, restorationsServicePaginateRestorations,
 		arg.ExecutionID,
@@ -2149,6 +2213,7 @@ type RestorationsServicePaginateRestorationsCountParams struct {
 	DatabaseID  uuid.NullUUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/restorations/paginate_restorations.sql
 func (q *Queries) RestorationsServicePaginateRestorationsCount(ctx context.Context, arg RestorationsServicePaginateRestorationsCountParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, restorationsServicePaginateRestorationsCount, arg.ExecutionID, arg.DatabaseID)
 	var count int64
@@ -2173,6 +2238,7 @@ type RestorationsServiceUpdateRestorationParams struct {
 	ID         uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/restorations/update_restoration.sql
 func (q *Queries) RestorationsServiceUpdateRestoration(ctx context.Context, arg RestorationsServiceUpdateRestorationParams) (Restoration, error) {
 	row := q.db.QueryRowContext(ctx, restorationsServiceUpdateRestoration,
 		arg.Status,
@@ -2205,6 +2271,7 @@ type UsersServiceChangePasswordParams struct {
 	ID       uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/users/change_password.sql
 func (q *Queries) UsersServiceChangePassword(ctx context.Context, arg UsersServiceChangePasswordParams) error {
 	_, err := q.db.ExecContext(ctx, usersServiceChangePassword, arg.Password, arg.ID)
 	return err
@@ -2222,6 +2289,7 @@ type UsersServiceCreateUserParams struct {
 	Password string
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/users/create_user.sql
 func (q *Queries) UsersServiceCreateUser(ctx context.Context, arg UsersServiceCreateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, usersServiceCreateUser, arg.Name, arg.Email, arg.Password)
 	var i User
@@ -2240,6 +2308,7 @@ const usersServiceGetUserByEmail = `-- name: UsersServiceGetUserByEmail :one
 SELECT id, name, email, password, created_at, updated_at FROM users WHERE email = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/users/get_user_by_email.sql
 func (q *Queries) UsersServiceGetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRowContext(ctx, usersServiceGetUserByEmail, email)
 	var i User
@@ -2258,6 +2327,7 @@ const usersServiceGetUsersQty = `-- name: UsersServiceGetUsersQty :one
 SELECT COUNT(*) FROM users
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/users/get_users_qty.sql
 func (q *Queries) UsersServiceGetUsersQty(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, usersServiceGetUsersQty)
 	var count int64
@@ -2282,6 +2352,7 @@ type UsersServiceUpdateUserParams struct {
 	ID       uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/users/update_user.sql
 func (q *Queries) UsersServiceUpdateUser(ctx context.Context, arg UsersServiceUpdateUserParams) (User, error) {
 	row := q.db.QueryRowContext(ctx, usersServiceUpdateUser,
 		arg.Name,
@@ -2322,6 +2393,7 @@ type WebhooksServiceCreateWebhookParams struct {
 	Body      sql.NullString
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/create_webhook.sql
 func (q *Queries) WebhooksServiceCreateWebhook(ctx context.Context, arg WebhooksServiceCreateWebhookParams) (Webhook, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServiceCreateWebhook,
 		arg.Name,
@@ -2373,6 +2445,7 @@ type WebhooksServiceCreateWebhookExecutionParams struct {
 	ResDuration sql.NullInt32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/run_webhook.sql
 func (q *Queries) WebhooksServiceCreateWebhookExecution(ctx context.Context, arg WebhooksServiceCreateWebhookExecutionParams) (WebhookExecution, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServiceCreateWebhookExecution,
 		arg.WebhookID,
@@ -2404,6 +2477,7 @@ const webhooksServiceDeleteWebhook = `-- name: WebhooksServiceDeleteWebhook :exe
 DELETE FROM webhooks WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/delete_webhook.sql
 func (q *Queries) WebhooksServiceDeleteWebhook(ctx context.Context, webhookID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, webhooksServiceDeleteWebhook, webhookID)
 	return err
@@ -2424,6 +2498,7 @@ WHERE webhooks.id = $1
 RETURNING id, name, is_active, event_type, target_ids, url, method, headers, body, created_at, updated_at
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/duplicate_webhook.sql
 func (q *Queries) WebhooksServiceDuplicateWebhook(ctx context.Context, webhookID uuid.UUID) (Webhook, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServiceDuplicateWebhook, webhookID)
 	var i Webhook
@@ -2447,6 +2522,7 @@ const webhooksServiceGetWebhook = `-- name: WebhooksServiceGetWebhook :one
 SELECT id, name, is_active, event_type, target_ids, url, method, headers, body, created_at, updated_at FROM webhooks WHERE id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/get_webhook.sql
 func (q *Queries) WebhooksServiceGetWebhook(ctx context.Context, webhookID uuid.UUID) (Webhook, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServiceGetWebhook, webhookID)
 	var i Webhook
@@ -2478,6 +2554,7 @@ type WebhooksServiceGetWebhooksToRunParams struct {
 	TargetID  uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/run_webhook.sql
 func (q *Queries) WebhooksServiceGetWebhooksToRun(ctx context.Context, arg WebhooksServiceGetWebhooksToRunParams) ([]Webhook, error) {
 	rows, err := q.db.QueryContext(ctx, webhooksServiceGetWebhooksToRun, arg.EventType, arg.TargetID)
 	if err != nil {
@@ -2526,6 +2603,7 @@ type WebhooksServicePaginateWebhookExecutionsParams struct {
 	Limit     int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/paginate_webhook_executions.sql
 func (q *Queries) WebhooksServicePaginateWebhookExecutions(ctx context.Context, arg WebhooksServicePaginateWebhookExecutionsParams) ([]WebhookExecution, error) {
 	rows, err := q.db.QueryContext(ctx, webhooksServicePaginateWebhookExecutions, arg.WebhookID, arg.Offset, arg.Limit)
 	if err != nil {
@@ -2565,6 +2643,7 @@ SELECT COUNT(*) FROM webhook_executions
 WHERE webhook_id = $1
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/paginate_webhook_executions.sql
 func (q *Queries) WebhooksServicePaginateWebhookExecutionsCount(ctx context.Context, webhookID uuid.UUID) (int64, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServicePaginateWebhookExecutionsCount, webhookID)
 	var count int64
@@ -2583,6 +2662,7 @@ type WebhooksServicePaginateWebhooksParams struct {
 	Limit  int32
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/paginate_webhooks.sql
 func (q *Queries) WebhooksServicePaginateWebhooks(ctx context.Context, arg WebhooksServicePaginateWebhooksParams) ([]Webhook, error) {
 	rows, err := q.db.QueryContext(ctx, webhooksServicePaginateWebhooks, arg.Offset, arg.Limit)
 	if err != nil {
@@ -2622,6 +2702,7 @@ const webhooksServicePaginateWebhooksCount = `-- name: WebhooksServicePaginateWe
 SELECT COUNT(*) FROM webhooks
 `
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/paginate_webhooks.sql
 func (q *Queries) WebhooksServicePaginateWebhooksCount(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServicePaginateWebhooksCount)
 	var count int64
@@ -2656,6 +2737,7 @@ type WebhooksServiceUpdateWebhookParams struct {
 	WebhookID uuid.UUID
 }
 
+// file: /mnt/a/__Github/pgbackweb/internal/service/webhooks/update_webhook.sql
 func (q *Queries) WebhooksServiceUpdateWebhook(ctx context.Context, arg WebhooksServiceUpdateWebhookParams) (Webhook, error) {
 	row := q.db.QueryRowContext(ctx, webhooksServiceUpdateWebhook,
 		arg.Name,
