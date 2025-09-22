@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"archive/zip"
 	"bytes"
 	"fmt"
 	"io"
