@@ -3,7 +3,7 @@ FROM denoland/deno:debian-2.1.9 AS deno
 FROM golang:1.23.5-bookworm AS golang
 
 # Set the base image
-FROM debian:12.7
+FROM debian:13
 
 # Declare ARG to make it available in the RUN commands
 ARG TARGETPLATFORM
