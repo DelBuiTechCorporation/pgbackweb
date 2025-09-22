@@ -136,7 +136,7 @@ func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
 }
 
 func editBackupForm(
-	backup dbgen.Backup,
+	backup dbgen.BackupsServiceGetBackupRow,
 	databases []dbgen.DatabasesServiceGetAllDatabasesRow,
 	destinations []dbgen.DestinationsServiceGetAllDestinationsRow,
 ) nodx.Node {
@@ -411,6 +411,9 @@ func editBackupForm(
 			Placeholder: "Optional password for ZIP file",
 			Type:        component.InputTypePassword,
 			HelpText:    "Password to protect the ZIP file (leave empty for no password)",
+			Children: []nodx.Node{
+				nodx.Value(backup.DecryptedZipPassword),
+			},
 		}),
 
 		nodx.Div(

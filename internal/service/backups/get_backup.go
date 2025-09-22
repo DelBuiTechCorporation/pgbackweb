@@ -9,6 +9,9 @@ import (
 
 func (s *Service) GetBackup(
 	ctx context.Context, id uuid.UUID,
-) (dbgen.Backup, error) {
-	return s.dbgen.BackupsServiceGetBackup(ctx, id)
+) (dbgen.BackupsServiceGetBackupRow, error) {
+	return s.dbgen.BackupsServiceGetBackup(ctx, dbgen.BackupsServiceGetBackupParams{
+		ID:            id,
+		EncryptionKey: s.env.PBW_ENCRYPTION_KEY,
+	})
 }
