@@ -201,27 +201,26 @@ func editBackupForm(
 			HelpText: "If yes, backup all non-template databases in the instance",
 		}),
 
-		alpine.Template(
-			alpine.XIf("all_databases == 'false'"),
-			component.SelectControl(component.SelectControlParams{
-				Name:        "database_id",
-				Label:       "Database",
-				Required:    true,
-				Placeholder: "Select a database",
-				Children: []nodx.Node{
-					nodx.Map(
-						databases,
-						func(db dbgen.DatabasesServiceGetAllDatabasesRow) nodx.Node {
-							selected := nodx.If(
-								!backup.AllDatabases && backup.DatabaseID == db.ID,
-								nodx.Selected(""),
-							)
-							return nodx.Option(nodx.Value(db.ID.String()), nodx.Text(db.Name), selected)
-						},
-					),
-				},
-			}),
-		),
+		component.SelectControl(component.SelectControlParams{
+			Name:        "database_id",
+			Label:       "Database",
+			Required:    true,
+			Placeholder: "Select a database",
+			Children: []nodx.Node{
+				alpine.XBind("disabled", "all_databases == 'true'"),
+				nodx.Map(
+					databases,
+					func(db dbgen.DatabasesServiceGetAllDatabasesRow) nodx.Node {
+						selected := nodx.If(
+							backup.DatabaseID == db.ID,
+							nodx.Selected(""),
+						)
+						return nodx.Option(nodx.Value(db.ID.String()), nodx.Text(db.Name), selected)
+					},
+				),
+			},
+			HelpText: "Select the database to backup (disabled when backing up all databases)",
+		}),
 
 		component.SelectControl(component.SelectControlParams{
 			Name:     "is_local",
