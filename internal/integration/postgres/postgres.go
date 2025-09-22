@@ -360,6 +360,9 @@ func (Client) RestoreZip(
 		return fmt.Errorf("dump.sql file not found in ZIP file: %s", zipPath)
 	}
 
+	cmd = exec.Command(version.Value.PSQL, connString, "-f", dumpPath)
+	output, err = cmd.CombinedOutput()
+	if err != nil {
 		return fmt.Errorf(
 			"error running psql v%s command: %s",
 			version.Value.Version, output,
