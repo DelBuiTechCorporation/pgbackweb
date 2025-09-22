@@ -669,12 +669,16 @@ DELETE FROM webhooks WHERE id = @webhook_id;
 -- name: BackupsServiceUpdateBackup :one
 UPDATE backups
 SET
+  database_id = COALESCE(sqlc.narg('database_id'), database_id),
+  destination_id = COALESCE(sqlc.narg('destination_id'), destination_id),
+  is_local = COALESCE(sqlc.narg('is_local'), is_local),
   name = COALESCE(sqlc.narg('name'), @name),
   cron_expression = COALESCE(sqlc.narg('cron_expression'), cron_expression),
   time_zone = COALESCE(sqlc.narg('time_zone'), time_zone),
   is_active = COALESCE(sqlc.narg('is_active'), is_active),
   dest_dir = COALESCE(sqlc.narg('dest_dir'), dest_dir),
   retention_days = COALESCE(sqlc.narg('retention_days'), retention_days),
+  all_databases = COALESCE(sqlc.narg('all_databases'), all_databases),
   opt_data_only = COALESCE(sqlc.narg('opt_data_only'), opt_data_only),
   opt_schema_only = COALESCE(sqlc.narg('opt_schema_only'), opt_schema_only),
   opt_clean = COALESCE(sqlc.narg('opt_clean'), opt_clean),

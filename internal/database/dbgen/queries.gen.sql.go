@@ -622,34 +622,42 @@ func (q *Queries) BackupsServiceToggleIsActive(ctx context.Context, backupID uui
 const backupsServiceUpdateBackup = `-- name: BackupsServiceUpdateBackup :one
 UPDATE backups
 SET
-  name = COALESCE($1, $1),
-  cron_expression = COALESCE($2, cron_expression),
-  time_zone = COALESCE($3, time_zone),
-  is_active = COALESCE($4, is_active),
-  dest_dir = COALESCE($5, dest_dir),
-  retention_days = COALESCE($6, retention_days),
-  opt_data_only = COALESCE($7, opt_data_only),
-  opt_schema_only = COALESCE($8, opt_schema_only),
-  opt_clean = COALESCE($9, opt_clean),
-  opt_if_exists = COALESCE($10, opt_if_exists),
-  opt_create = COALESCE($11, opt_create),
-  opt_no_comments = COALESCE($12, opt_no_comments),
+  database_id = COALESCE($1, database_id),
+  destination_id = COALESCE($2, destination_id),
+  is_local = COALESCE($3, is_local),
+  name = COALESCE($4, $4),
+  cron_expression = COALESCE($5, cron_expression),
+  time_zone = COALESCE($6, time_zone),
+  is_active = COALESCE($7, is_active),
+  dest_dir = COALESCE($8, dest_dir),
+  retention_days = COALESCE($9, retention_days),
+  all_databases = COALESCE($10, all_databases),
+  opt_data_only = COALESCE($11, opt_data_only),
+  opt_schema_only = COALESCE($12, opt_schema_only),
+  opt_clean = COALESCE($13, opt_clean),
+  opt_if_exists = COALESCE($14, opt_if_exists),
+  opt_create = COALESCE($15, opt_create),
+  opt_no_comments = COALESCE($16, opt_no_comments),
   zip_password = CASE
-    WHEN $13::TEXT IS NULL THEN zip_password
-    WHEN $13::TEXT = '' THEN NULL
-    ELSE pgp_sym_encrypt($13::TEXT, $14::TEXT)
+    WHEN $17::TEXT IS NULL THEN zip_password
+    WHEN $17::TEXT = '' THEN NULL
+    ELSE pgp_sym_encrypt($17::TEXT, $18::TEXT)
   END
-WHERE id = $15
+WHERE id = $19
 RETURNING id, database_id, destination_id, name, cron_expression, time_zone, is_active, dest_dir, retention_days, opt_data_only, opt_schema_only, opt_clean, opt_if_exists, opt_create, opt_no_comments, created_at, updated_at, is_local, all_databases, zip_password
 `
 
 type BackupsServiceUpdateBackupParams struct {
+	DatabaseID     uuid.NullUUID
+	DestinationID  uuid.NullUUID
+	IsLocal        sql.NullBool
 	Name           sql.NullString
 	CronExpression sql.NullString
 	TimeZone       sql.NullString
 	IsActive       sql.NullBool
 	DestDir        sql.NullString
 	RetentionDays  sql.NullInt16
+	AllDatabases   sql.NullBool
 	OptDataOnly    sql.NullBool
 	OptSchemaOnly  sql.NullBool
 	OptClean       sql.NullBool
@@ -664,12 +672,16 @@ type BackupsServiceUpdateBackupParams struct {
 // file: /home/pgbackweb/internal/service/backups/update_backup.sql
 func (q *Queries) BackupsServiceUpdateBackup(ctx context.Context, arg BackupsServiceUpdateBackupParams) (Backup, error) {
 	row := q.db.QueryRowContext(ctx, backupsServiceUpdateBackup,
+		arg.DatabaseID,
+		arg.DestinationID,
+		arg.IsLocal,
 		arg.Name,
 		arg.CronExpression,
 		arg.TimeZone,
 		arg.IsActive,
 		arg.DestDir,
 		arg.RetentionDays,
+		arg.AllDatabases,
 		arg.OptDataOnly,
 		arg.OptSchemaOnly,
 		arg.OptClean,
