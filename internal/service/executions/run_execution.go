@@ -62,7 +62,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 		err = s.ints.StorageClient.S3Test(
 			back.DecryptedDestinationAccessKey, back.DecryptedDestinationSecretKey,
 			back.DestinationRegion.String, back.DestinationEndpoint.String,
-			back.DestinationBucketName.String, back.DestinationForcePathStyle,
+			back.DestinationBucketName.String, back.DestinationForcePathStyle.Bool,
 		)
 		if err != nil {
 			logError(err)
@@ -135,7 +135,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 		fileSize, err = s.ints.StorageClient.S3Upload(
 			back.DecryptedDestinationAccessKey, back.DecryptedDestinationSecretKey,
 			back.DestinationRegion.String, back.DestinationEndpoint.String,
-			back.DestinationBucketName.String, path, dumpReader, back.DestinationForcePathStyle,
+			back.DestinationBucketName.String, path, dumpReader, back.DestinationForcePathStyle.Bool,
 		)
 		if err != nil {
 			logError(err)
@@ -162,3 +162,4 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 		FileSize:   sql.NullInt64{Valid: true, Int64: fileSize},
 	})
 }
+

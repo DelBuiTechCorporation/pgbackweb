@@ -29,7 +29,7 @@ func (s *Service) SoftDeleteExecution(
 		err := s.ints.StorageClient.S3Delete(
 			execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
 			execution.DestinationRegion.String, execution.DestinationEndpoint.String,
-			execution.DestinationBucketName.String, execution.ExecutionPath.String, execution.DestinationForcePathStyle,
+			execution.DestinationBucketName.String, execution.ExecutionPath.String, execution.DestinationForcePathStyle.Bool,
 		)
 		if err != nil {
 			return err
@@ -45,3 +45,4 @@ func (s *Service) SoftDeleteExecution(
 
 	return s.dbgen.ExecutionsServiceSoftDeleteExecution(ctx, executionID)
 }
+
