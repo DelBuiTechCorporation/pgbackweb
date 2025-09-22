@@ -32,14 +32,13 @@ func (h *handlers) editDestinationHandler(c echo.Context) error {
 
 	_, err = h.servs.DestinationsService.UpdateDestination(
 		ctx, dbgen.DestinationsServiceUpdateDestinationParams{
-			ID:             destinationID,
-			Name:           sql.NullString{String: formData.Name, Valid: true},
-			BucketName:     sql.NullString{String: formData.BucketName, Valid: true},
-			Region:         sql.NullString{String: formData.Region, Valid: true},
-			Endpoint:       sql.NullString{String: formData.Endpoint, Valid: true},
-			ForcePathStyle: sql.NullBool{Bool: formData.ForcePathStyle == "true", Valid: true},
-			AccessKey:      sql.NullString{String: formData.AccessKey, Valid: true},
-			SecretKey:      sql.NullString{String: formData.SecretKey, Valid: true},
+			ID:         destinationID,
+			Name:       sql.NullString{String: formData.Name, Valid: true},
+			BucketName: sql.NullString{String: formData.BucketName, Valid: true},
+			Region:     sql.NullString{String: formData.Region, Valid: true},
+			Endpoint:   sql.NullString{String: formData.Endpoint, Valid: true},
+			AccessKey:  sql.NullString{String: formData.AccessKey, Valid: true},
+			SecretKey:  sql.NullString{String: formData.SecretKey, Valid: true},
 		},
 	)
 	if err != nil {
@@ -142,27 +141,6 @@ func editDestinationButton(
 					Children: []nodx.Node{
 						nodx.Value(destination.DecryptedSecretKey),
 					},
-				}),
-
-				component.SelectControl(component.SelectControlParams{
-					Name:     "force_path_style",
-					Label:    "Force path-style addressing",
-					Required: true,
-					Children: []nodx.Node{
-						nodx.Option(nodx.Value("false"), nodx.Text("No"), func() nodx.Node {
-							if !destination.ForcePathStyle {
-								return nodx.Selected("")
-							}
-							return nil
-						}()),
-						nodx.Option(nodx.Value("true"), nodx.Text("Yes"), func() nodx.Node {
-							if destination.ForcePathStyle {
-								return nodx.Selected("")
-							}
-							return nil
-						}()),
-					},
-					HelpText: "Enable for MinIO or S3-compatible services that require path-style URLs.",
 				}),
 			),
 

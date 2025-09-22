@@ -29,7 +29,7 @@ func (s *Service) SoftDeleteExecution(
 		err := s.ints.StorageClient.S3Delete(
 			execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
 			execution.DestinationRegion.String, execution.DestinationEndpoint.String,
-			execution.DestinationBucketName.String, execution.ExecutionPath.String, execution.DestinationForcePathStyle.Bool,
+			execution.DestinationBucketName.String, execution.ExecutionPath.String,
 		)
 		if err != nil {
 			return err

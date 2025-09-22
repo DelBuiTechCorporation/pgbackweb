@@ -16,7 +16,7 @@ import (
 
 // createS3Client creates a new S3 client
 func createS3Client(
-	accessKey, secretKey, region, endpoint string, forcePathStyle bool,
+	accessKey, secretKey, region, endpoint string,
 ) (*s3.Client, error) {
 	credentialsProvider := credentials.NewStaticCredentialsProvider(
 		accessKey, secretKey, "",
@@ -29,13 +29,12 @@ func createS3Client(
 		return aws.Endpoint{
 			HostnameImmutable: true,
 			URL:               endpoint,
-			SigningRegion:     region,
 		}, nil
 	})
 
 	//nolint:all
 	conf, err := config.LoadDefaultConfig(
-		context.Background(),
+		context.TODO(),
 		config.WithRegion(region),
 		config.WithEndpointResolver(endpointResolver),
 		config.WithCredentialsProvider(credentialsProvider),
@@ -44,20 +43,16 @@ func createS3Client(
 		return nil, fmt.Errorf("error initializing storage config: %w", err)
 	}
 
-	s3Client := s3.NewFromConfig(conf, func(o *s3.Options) {
-		if forcePathStyle {
-			o.UsePathStyle = true
-		}
-	})
+	s3Client := s3.NewFromConfig(conf)
 	return s3Client, nil
 }
 
 // S3Test tests the connection to S3
 func (Client) S3Test(
-	accessKey, secretKey, region, endpoint, bucketName string, forcePathStyle bool,
+	accessKey, secretKey, region, endpoint, bucketName string,
 ) error {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint, forcePathStyle,
+		accessKey, secretKey, region, endpoint,
 	)
 	if err != nil {
 		return err
@@ -81,10 +76,10 @@ func (Client) S3Test(
 // Returns the file size, in bytes.
 func (Client) S3Upload(
 	accessKey, secretKey, region, endpoint, bucketName, key string,
-	fileReader io.Reader, forcePathStyle bool,
+	fileReader io.Reader,
 ) (int64, error) {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint, forcePathStyle,
+		accessKey, secretKey, region, endpoint,
 	)
 	if err != nil {
 		return 0, err
@@ -128,10 +123,10 @@ func (Client) S3Upload(
 
 // S3Delete deletes a file from S3
 func (Client) S3Delete(
-	accessKey, secretKey, region, endpoint, bucketName, key string, forcePathStyle bool,
+	accessKey, secretKey, region, endpoint, bucketName, key string,
 ) error {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint, forcePathStyle,
+		accessKey, secretKey, region, endpoint,
 	)
 	if err != nil {
 		return err
@@ -156,10 +151,10 @@ func (Client) S3Delete(
 // S3GetDownloadLink generates a presigned URL for downloading a file from S3
 func (Client) S3GetDownloadLink(
 	accessKey, secretKey, region, endpoint, bucketName, key string,
-	expiration time.Duration, forcePathStyle bool,
+	expiration time.Duration,
 ) (string, error) {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint, forcePathStyle,
+		accessKey, secretKey, region, endpoint,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create S3 client: %w", err)

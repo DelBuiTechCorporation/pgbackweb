@@ -11,7 +11,7 @@ func (s *Service) UpdateDestination(
 ) (dbgen.Destination, error) {
 	err := s.TestDestination(
 		params.AccessKey.String, params.SecretKey.String, params.Region.String,
-		params.Endpoint.String, params.BucketName.String, params.ForcePathStyle.Bool,
+		params.Endpoint.String, params.BucketName.String,
 	)
 	if err != nil {
 		return dbgen.Destination{}, err

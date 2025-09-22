@@ -62,7 +62,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 		err = s.ints.StorageClient.S3Test(
 			back.DecryptedDestinationAccessKey, back.DecryptedDestinationSecretKey,
 			back.DestinationRegion.String, back.DestinationEndpoint.String,
-			back.DestinationBucketName.String, back.DestinationForcePathStyle.Bool,
+			back.DestinationBucketName.String,
 		)
 		if err != nil {
 			logError(err)
@@ -98,7 +98,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 	}
 
 	dumpReader := s.ints.PGClient.DumpZip(
-		pgVersion, back.DecryptedDatabaseConnectionString, back.BackupAllDatabases, back.DecryptedBackupZipPassword, postgres.DumpParams{
+		pgVersion, back.DecryptedDatabaseConnectionString, false, "", postgres.DumpParams{
 			DataOnly:   back.BackupOptDataOnly,
 			SchemaOnly: back.BackupOptSchemaOnly,
 			Clean:      back.BackupOptClean,
@@ -135,7 +135,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 		fileSize, err = s.ints.StorageClient.S3Upload(
 			back.DecryptedDestinationAccessKey, back.DecryptedDestinationSecretKey,
 			back.DestinationRegion.String, back.DestinationEndpoint.String,
-			back.DestinationBucketName.String, path, dumpReader, back.DestinationForcePathStyle.Bool,
+			back.DestinationBucketName.String, path, dumpReader,
 		)
 		if err != nil {
 			logError(err)

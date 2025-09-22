@@ -2,7 +2,7 @@
 UPDATE users
 SET
   name = COALESCE(sqlc.narg('name'), name),
-  email = lower(COALESCE(sqlc.narg('email'), email)),
+  email = lower(@email),
   password = COALESCE(sqlc.narg('password'), password)
 WHERE id = @id
 RETURNING *;

@@ -34,7 +34,7 @@ func (h *handlers) updateUserHandler(c echo.Context) error {
 	_, err := h.servs.UsersService.UpdateUser(ctx, dbgen.UsersServiceUpdateUserParams{
 		ID:       reqCtx.User.ID,
 		Name:     sql.NullString{String: formData.Name, Valid: true},
-		Email:    sql.NullString{String: formData.Email, Valid: true},
+		Email:    formData.Email,
 		Password: sql.NullString{String: formData.Password, Valid: formData.Password != ""},
 	})
 	if err != nil {

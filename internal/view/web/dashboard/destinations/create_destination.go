@@ -12,13 +12,12 @@ import (
 )
 
 type createDestinationDTO struct {
-	Name          string `form:"name" validate:"required"`
-	BucketName    string `form:"bucket_name" validate:"required"`
-	AccessKey     string `form:"access_key" validate:"required"`
-	SecretKey     string `form:"secret_key" validate:"required"`
-	Region        string `form:"region" validate:"required"`
-	Endpoint      string `form:"endpoint" validate:"required"`
-	ForcePathStyle string `form:"force_path_style" validate:"required,oneof=true false"`
+	Name       string `form:"name" validate:"required"`
+	BucketName string `form:"bucket_name" validate:"required"`
+	AccessKey  string `form:"access_key" validate:"required"`
+	SecretKey  string `form:"secret_key" validate:"required"`
+	Region     string `form:"region" validate:"required"`
+	Endpoint   string `form:"endpoint" validate:"required"`
 }
 
 func (h *handlers) createDestinationHandler(c echo.Context) error {
@@ -34,13 +33,12 @@ func (h *handlers) createDestinationHandler(c echo.Context) error {
 
 	_, err := h.servs.DestinationsService.CreateDestination(
 		ctx, dbgen.DestinationsServiceCreateDestinationParams{
-			Name:           formData.Name,
-			AccessKey:      formData.AccessKey,
-			SecretKey:      formData.SecretKey,
-			Region:         formData.Region,
-			Endpoint:       formData.Endpoint,
-			BucketName:     formData.BucketName,
-			ForcePathStyle: formData.ForcePathStyle == "true",
+			Name:       formData.Name,
+			AccessKey:  formData.AccessKey,
+			SecretKey:  formData.SecretKey,
+			Region:     formData.Region,
+			Endpoint:   formData.Endpoint,
+			BucketName: formData.BucketName,
 		},
 	)
 	if err != nil {
@@ -118,17 +116,6 @@ func createDestinationButton() nodx.Node {
 					Required:    true,
 					Type:        component.InputTypeText,
 					HelpText:    "It will be stored securely using PGP encryption.",
-				}),
-
-				component.SelectControl(component.SelectControlParams{
-					Name:     "force_path_style",
-					Label:    "Force path-style addressing",
-					Required: true,
-					Children: []nodx.Node{
-						nodx.Option(nodx.Value("false"), nodx.Text("No"), nodx.Selected("")),
-						nodx.Option(nodx.Value("true"), nodx.Text("Yes")),
-					},
-					HelpText: "Enable for MinIO or S3-compatible services that require path-style URLs.",
 				}),
 			),
 
