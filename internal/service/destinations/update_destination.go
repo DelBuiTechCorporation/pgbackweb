@@ -20,32 +20,32 @@ func (s *Service) UpdateDestination(
 	if params.AccessKey.Valid {
 		accessKey = params.AccessKey.String
 	}
-	
+
 	secretKey := currentDest.DecryptedSecretKey
 	if params.SecretKey.Valid {
 		secretKey = params.SecretKey.String
 	}
-	
+
 	region := currentDest.Region
 	if params.Region.Valid {
 		region = params.Region.String
 	}
-	
+
 	endpoint := currentDest.Endpoint
 	if params.Endpoint.Valid {
 		endpoint = params.Endpoint.String
 	}
-	
+
 	bucketName := currentDest.BucketName
 	if params.BucketName.Valid {
 		bucketName = params.BucketName.String
 	}
-	
+
 	provider := currentDest.Provider
 	if params.Provider.Valid {
 		provider = params.Provider.String
 	}
-	
+
 	forcePathStyle := currentDest.ForcePathStyle
 	if params.ForcePathStyle.Valid {
 		forcePathStyle = params.ForcePathStyle.Bool
