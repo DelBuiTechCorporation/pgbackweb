@@ -4,7 +4,9 @@
 // @deno-types="npm:@types/glob"
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+// @ts-ignore: Deno script using Node.js module
 import fse from "fs-extra";
+// @ts-ignore: Deno script using Node.js module
 import { glob } from "glob";
 
 const sourceGlobs = [
