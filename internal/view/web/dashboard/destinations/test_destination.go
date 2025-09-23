@@ -18,7 +18,7 @@ func (h *handlers) testDestinationHandler(c echo.Context) error {
 
 	err := h.servs.DestinationsService.TestDestination(
 		formData.AccessKey, formData.SecretKey, formData.Region, formData.Endpoint,
-		formData.BucketName, "minio", false,
+		formData.BucketName, formData.Provider, formData.ForcePathStyle,
 	)
 	if err != nil {
 		return respondhtmx.ToastError(c, err.Error())

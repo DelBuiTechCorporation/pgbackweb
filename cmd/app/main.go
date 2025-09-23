@@ -35,6 +35,10 @@ func main() {
 			logger.Error("error closing database connection", logger.KV{"error": err})
 		}
 	}()
+
+	// Run migrations automatically on startup
+	runMigrations(env)
+
 	dbgen := dbgen.New(db)
 
 	ints := integration.New()

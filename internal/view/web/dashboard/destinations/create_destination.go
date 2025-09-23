@@ -121,6 +121,41 @@ func createDestinationButton() nodx.Node {
 					Type:        component.InputTypeText,
 					HelpText:    "It will be stored securely using PGP encryption.",
 				}),
+
+				component.SelectControl(component.SelectControlParams{
+					Name:        "provider",
+					Label:       "Provider",
+					Required:    true,
+					Placeholder: "Select provider",
+					HelpText:    "Choose between AWS S3 or MinIO compatible storage",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value("aws"), nodx.Text("AWS S3")),
+						nodx.Option(nodx.Value("minio"), nodx.Text("MinIO")),
+					},
+				}),
+
+				nodx.Div(
+					nodx.Class("form-control"),
+					nodx.LabelEl(
+						nodx.Class("cursor-pointer label justify-start space-x-2"),
+						nodx.Input(
+							nodx.Type("checkbox"),
+							nodx.Name("force_path_style"),
+							nodx.Class("checkbox"),
+						),
+						nodx.SpanEl(
+							nodx.Class("label-text"),
+							nodx.Text("Force path style"),
+						),
+					),
+					nodx.Div(
+						nodx.Class("label"),
+						nodx.SpanEl(
+							nodx.Class("label-text-alt text-xs"),
+							nodx.Text("Enable for MinIO or S3-compatible services that require path-style URLs"),
+						),
+					),
+				),
 			),
 
 			nodx.Div(
