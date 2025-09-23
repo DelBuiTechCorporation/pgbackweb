@@ -37,8 +37,8 @@ func (s *Service) GetExecutionDownloadLinkOrPath(
 	}
 
 	link, err := s.ints.StorageClient.S3GetDownloadLink(
-		"minio", data.DecryptedAccessKey, data.DecryptedSecretKey, data.Region.String,
-		data.Endpoint.String, data.BucketName.String, data.Path.String, time.Hour*12, false,
+		data.Provider.String, data.DecryptedAccessKey, data.DecryptedSecretKey, data.Region.String,
+		data.Endpoint.String, data.BucketName.String, data.Path.String, time.Hour*12, data.ForcePathStyle.Bool,
 	)
 	if err != nil {
 		return false, "", err

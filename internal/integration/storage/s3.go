@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 	"time"
 
@@ -70,14 +71,19 @@ func createS3Client(
 func createMinioClient(
 	accessKey, secretKey, endpoint string,
 ) (*minio.Client, error) {
-	// Remover https:// do endpoint para o cliente MinIO
-	minioEndpoint := strings.TrimPrefix(endpoint, "https://")
-	minioEndpoint = strings.TrimPrefix(minioEndpoint, "http://")
+	// Parse the endpoint URL to extract only the host
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid endpoint URL: %w", err)
+	}
+
+	// Use only the host (hostname:port) without any path
+	minioEndpoint := parsedURL.Host
 
 	// Criar cliente MinIO
 	minioClient, err := minio.New(minioEndpoint, &minio.Options{
 		Creds:  minioCreds.NewStaticV4(accessKey, secretKey, ""),
-		Secure: strings.HasPrefix(endpoint, "https://"),
+		Secure: parsedURL.Scheme == "https",
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MinIO client: %w", err)

@@ -1,5 +1,7 @@
 #!/usr/bin/env -S deno run -A
 
+// @deno-types="npm:@types/fs-extra"
+// @deno-types="npm:@types/glob"
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fse from "fs-extra";
@@ -20,8 +22,10 @@ function prefixQueriesWithFileName(content: string, fileName: string): string {
   const lines = content.split("\n");
   const modifiedLines = [];
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     if (line.startsWith("-- name: ")) {
+      // Adiciona o comentário do arquivo antes de cada query
       modifiedLines.push(`-- file: ${fileName}`);
     }
     modifiedLines.push(line);
@@ -37,6 +41,9 @@ try {
     const foundFiles = await glob(path.join(rootDir, sourceGlob));
     files.push(...foundFiles);
   }
+
+  // Ordena los archivos para consistencia
+  files.sort();
 
   // Lee cada archivo y los concatena en un solo string
   let outFileContent =

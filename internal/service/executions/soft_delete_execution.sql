@@ -9,6 +9,8 @@ SELECT
   destinations.bucket_name as destination_bucket_name,
   destinations.region as destination_region,
   destinations.endpoint as destination_endpoint,
+  destinations.provider as destination_provider,
+  destinations.force_path_style as destination_force_path_style,
   (
     CASE WHEN destinations.access_key IS NOT NULL
     THEN pgp_sym_decrypt(destinations.access_key, sqlc.arg('encryption_key')::TEXT)

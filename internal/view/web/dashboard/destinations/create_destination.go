@@ -12,12 +12,14 @@ import (
 )
 
 type createDestinationDTO struct {
-	Name       string `form:"name" validate:"required"`
-	BucketName string `form:"bucket_name" validate:"required"`
-	AccessKey  string `form:"access_key" validate:"required"`
-	SecretKey  string `form:"secret_key" validate:"required"`
-	Region     string `form:"region" validate:"required"`
-	Endpoint   string `form:"endpoint" validate:"required"`
+	Name           string `form:"name" validate:"required"`
+	BucketName     string `form:"bucket_name" validate:"required"`
+	AccessKey      string `form:"access_key" validate:"required"`
+	SecretKey      string `form:"secret_key" validate:"required"`
+	Region         string `form:"region" validate:"required"`
+	Endpoint       string `form:"endpoint" validate:"required"`
+	Provider       string `form:"provider" validate:"required,oneof=minio aws"`
+	ForcePathStyle bool   `form:"force_path_style"`
 }
 
 func (h *handlers) createDestinationHandler(c echo.Context) error {
@@ -33,12 +35,14 @@ func (h *handlers) createDestinationHandler(c echo.Context) error {
 
 	_, err := h.servs.DestinationsService.CreateDestination(
 		ctx, dbgen.DestinationsServiceCreateDestinationParams{
-			Name:       formData.Name,
-			AccessKey:  formData.AccessKey,
-			SecretKey:  formData.SecretKey,
-			Region:     formData.Region,
-			Endpoint:   formData.Endpoint,
-			BucketName: formData.BucketName,
+			Name:           formData.Name,
+			AccessKey:      formData.AccessKey,
+			SecretKey:      formData.SecretKey,
+			Region:         formData.Region,
+			Endpoint:       formData.Endpoint,
+			BucketName:     formData.BucketName,
+			Provider:       formData.Provider,
+			ForcePathStyle: formData.ForcePathStyle,
 		},
 	)
 	if err != nil {

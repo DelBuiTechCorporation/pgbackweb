@@ -47,18 +47,20 @@ type Database struct {
 }
 
 type Destination struct {
-	ID         uuid.UUID
-	Name       string
-	BucketName string
-	AccessKey  []byte
-	SecretKey  []byte
-	Region     string
-	Endpoint   string
-	CreatedAt  time.Time
-	UpdatedAt  sql.NullTime
-	TestOk     sql.NullBool
-	TestError  sql.NullString
-	LastTestAt sql.NullTime
+	ID             uuid.UUID
+	Name           string
+	BucketName     string
+	AccessKey      []byte
+	SecretKey      []byte
+	Region         string
+	Endpoint       string
+	CreatedAt      time.Time
+	UpdatedAt      sql.NullTime
+	TestOk         sql.NullBool
+	TestError      sql.NullString
+	LastTestAt     sql.NullTime
+	Provider       string
+	ForcePathStyle bool
 }
 
 type Execution struct {

@@ -5,6 +5,8 @@ SELECT
   destinations.bucket_name AS bucket_name,
   destinations.region AS region,
   destinations.endpoint AS endpoint,
+  destinations.provider AS provider,
+  destinations.force_path_style AS force_path_style,
   destinations.endpoint as destination_endpoint,
   (
     CASE WHEN destinations.access_key IS NOT NULL

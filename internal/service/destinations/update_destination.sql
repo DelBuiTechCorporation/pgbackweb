@@ -5,6 +5,8 @@ SET
   bucket_name = COALESCE(sqlc.narg('bucket_name'), bucket_name),
   region = COALESCE(sqlc.narg('region'), region),
   endpoint = COALESCE(sqlc.narg('endpoint'), endpoint),
+  provider = COALESCE(sqlc.narg('provider'), provider),
+  force_path_style = COALESCE(sqlc.narg('force_path_style'), force_path_style),
   access_key = CASE
     WHEN sqlc.narg('access_key')::TEXT IS NOT NULL
     THEN pgp_sym_encrypt(sqlc.narg('access_key')::TEXT, sqlc.arg('encryption_key')::TEXT)

@@ -31,16 +31,18 @@ func (h *handlers) editDestinationHandler(c echo.Context) error {
 	}
 
 	_, err = h.servs.DestinationsService.UpdateDestination(
-		ctx, dbgen.DestinationsServiceUpdateDestinationParams{
-			ID:         destinationID,
-			Name:       sql.NullString{String: formData.Name, Valid: true},
-			BucketName: sql.NullString{String: formData.BucketName, Valid: true},
-			Region:     sql.NullString{String: formData.Region, Valid: true},
-			Endpoint:   sql.NullString{String: formData.Endpoint, Valid: true},
-			AccessKey:  sql.NullString{String: formData.AccessKey, Valid: true},
-			SecretKey:  sql.NullString{String: formData.SecretKey, Valid: true},
-		},
-	)
+			ctx, dbgen.DestinationsServiceUpdateDestinationParams{
+				ID:             destinationID,
+				Name:           sql.NullString{String: formData.Name, Valid: true},
+				BucketName:     sql.NullString{String: formData.BucketName, Valid: true},
+				Region:         sql.NullString{String: formData.Region, Valid: true},
+				Endpoint:       sql.NullString{String: formData.Endpoint, Valid: true},
+				Provider:       sql.NullString{String: formData.Provider, Valid: true},
+				ForcePathStyle: sql.NullBool{Bool: formData.ForcePathStyle, Valid: true},
+				AccessKey:      sql.NullString{String: formData.AccessKey, Valid: true},
+				SecretKey:      sql.NullString{String: formData.SecretKey, Valid: true},
+			},
+		)
 	if err != nil {
 		return respondhtmx.ToastError(c, err.Error())
 	}
