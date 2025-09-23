@@ -56,7 +56,7 @@ func (s *Service) TestDestinationAndStoreResult(
 func (s *Service) TestDestination(
 	accessKey, secretKey, region, endpoint, bucketName string,
 ) error {
-	err := s.ints.StorageClient.S3Test(accessKey, secretKey, region, endpoint, bucketName)
+	err := s.ints.StorageClient.S3Test("minio", accessKey, secretKey, region, endpoint, bucketName, false)
 	if err != nil {
 		return fmt.Errorf("error testing destination: %w", err)
 	}

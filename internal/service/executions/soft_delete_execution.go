@@ -27,9 +27,9 @@ func (s *Service) SoftDeleteExecution(
 
 	if execution.ExecutionPath.Valid && !execution.BackupIsLocal {
 		err := s.ints.StorageClient.S3Delete(
-			execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
+			"minio", execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
 			execution.DestinationRegion.String, execution.DestinationEndpoint.String,
-			execution.DestinationBucketName.String, execution.ExecutionPath.String,
+			execution.DestinationBucketName.String, execution.ExecutionPath.String, false,
 		)
 		if err != nil {
 			return err
