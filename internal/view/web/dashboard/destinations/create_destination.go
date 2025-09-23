@@ -134,28 +134,17 @@ func createDestinationButton() nodx.Node {
 					},
 				}),
 
-				nodx.Div(
-					nodx.Class("form-control"),
-					nodx.LabelEl(
-						nodx.Class("cursor-pointer label justify-start space-x-2"),
-						nodx.Input(
-							nodx.Type("checkbox"),
-							nodx.Name("force_path_style"),
-							nodx.Class("checkbox"),
-						),
-						nodx.SpanEl(
-							nodx.Class("label-text"),
-							nodx.Text("Force path style"),
-						),
-					),
-					nodx.Div(
-						nodx.Class("label"),
-						nodx.SpanEl(
-							nodx.Class("label-text-alt text-xs"),
-							nodx.Text("Enable for MinIO or S3-compatible services that require path-style URLs"),
-						),
-					),
-				),
+				component.SelectControl(component.SelectControlParams{
+					Name:        "force_path_style",
+					Label:       "Force path style",
+					Required:    true,
+					Placeholder: "Select option",
+					HelpText:    "Enable for MinIO or S3-compatible services that require path-style URLs",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value("false"), nodx.Text("No")),
+						nodx.Option(nodx.Value("true"), nodx.Text("Yes")),
+					},
+				}),
 			),
 
 			nodx.Div(
