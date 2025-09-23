@@ -2,6 +2,7 @@ package webhooks
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -35,9 +36,24 @@ func (s *Service) SendWebhookRequest(
 		return fmt.Errorf("error parsing headers: %w", err)
 	}
 
-	client := http.Client{Timeout: time.Second * 30}
+	url := webhook.Url
+	var client *http.Client
+	if strings.HasPrefix(url, "https://") {
+		client = &http.Client{Timeout: time.Second * 30}
+	} else if strings.HasPrefix(url, "http://") {
+		client = &http.Client{
+			Timeout: time.Second * 30,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+	} else {
+		url = "https://" + url
+		client = &http.Client{Timeout: time.Second * 30}
+	}
+
 	req, err := http.NewRequestWithContext(
-		ctx, webhook.Method, webhook.Url, bodyReader,
+		ctx, webhook.Method, url, bodyReader,
 	)
 	if err != nil {
 		return fmt.Errorf("error creating request: %w", err)

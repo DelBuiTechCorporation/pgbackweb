@@ -2,6 +2,7 @@ package destinations
 
 import (
 	"context"
+	"strings"
 
 	"github.com/eduardolat/pgbackweb/internal/database/dbgen"
 )
@@ -49,6 +50,10 @@ func (s *Service) UpdateDestination(
 	forcePathStyle := currentDest.ForcePathStyle
 	if params.ForcePathStyle.Valid {
 		forcePathStyle = params.ForcePathStyle.Bool
+	}
+
+	if !strings.HasPrefix(endpoint, "https://") && !strings.HasPrefix(endpoint, "http://") {
+		endpoint = "https://" + endpoint
 	}
 
 	err = s.TestDestination(
