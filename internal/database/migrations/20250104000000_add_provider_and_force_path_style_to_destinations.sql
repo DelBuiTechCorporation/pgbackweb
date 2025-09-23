@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE destinations ADD COLUMN IF NOT EXISTS provider TEXT;
-ALTER TABLE destinations ADD COLUMN IF NOT EXISTS force_path_style BOOLEAN DEFAULT false;
+ALTER TABLE destinations ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'aws';
+ALTER TABLE destinations ADD COLUMN IF NOT EXISTS force_path_style BOOLEAN NOT NULL DEFAULT false;
 -- +goose StatementEnd
 
 -- +goose Down
