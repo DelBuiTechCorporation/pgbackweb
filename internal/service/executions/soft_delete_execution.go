@@ -30,6 +30,7 @@ func (s *Service) SoftDeleteExecution(
 			execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
 			execution.DestinationRegion.String, execution.DestinationEndpoint.String,
 			execution.DestinationBucketName.String, execution.ExecutionPath.String,
+			execution.DestinationForcePathStyle.Bool,
 		)
 		if err != nil {
 			return err

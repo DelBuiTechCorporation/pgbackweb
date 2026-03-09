@@ -19,6 +19,7 @@ type createDestinationDTO struct {
 	SecretKey  string `form:"secret_key" validate:"required"`
 	Region     string `form:"region" validate:"required"`
 	Endpoint   string `form:"endpoint" validate:"required"`
+	ForcePathStyle string `form:"force_path_style" validate:"required,oneof=true false"`
 }
 
 func (h *handlers) createDestinationHandler(c echo.Context) error {
@@ -40,6 +41,7 @@ func (h *handlers) createDestinationHandler(c echo.Context) error {
 			Region:     formData.Region,
 			Endpoint:   formData.Endpoint,
 			BucketName: formData.BucketName,
+			ForcePathStyle: formData.ForcePathStyle == "true",
 		},
 	)
 	if err != nil {
@@ -117,6 +119,17 @@ func createDestinationButton() nodx.Node {
 					Required:    true,
 					Type:        component.InputTypeText,
 					HelpText:    "It will be stored securely using PGP encryption.",
+				}),
+
+				component.SelectControl(component.SelectControlParams{
+					Name:     "force_path_style",
+					Label:    "Force path style",
+					Required: true,
+					HelpText: "Enable for providers that require path-style S3 URLs.",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value("false"), nodx.Text("No"), nodx.Selected("")),
+						nodx.Option(nodx.Value("true"), nodx.Text("Yes")),
+					},
 				}),
 			),
 

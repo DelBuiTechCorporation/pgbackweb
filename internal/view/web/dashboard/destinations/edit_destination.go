@@ -38,6 +38,7 @@ func (h *handlers) editDestinationHandler(c echo.Context) error {
 			BucketName: sql.NullString{String: formData.BucketName, Valid: true},
 			Region:     sql.NullString{String: formData.Region, Valid: true},
 			Endpoint:   sql.NullString{String: formData.Endpoint, Valid: true},
+			ForcePathStyle: sql.NullBool{Bool: formData.ForcePathStyle == "true", Valid: true},
 			AccessKey:  sql.NullString{String: formData.AccessKey, Valid: true},
 			SecretKey:  sql.NullString{String: formData.SecretKey, Valid: true},
 		},
@@ -141,6 +142,17 @@ func editDestinationButton(
 					HelpText:    "It will be stored securely using PGP encryption.",
 					Children: []nodx.Node{
 						nodx.Value(destination.DecryptedSecretKey),
+					},
+				}),
+
+				component.SelectControl(component.SelectControlParams{
+					Name:     "force_path_style",
+					Label:    "Force path style",
+					Required: true,
+					HelpText: "Enable for providers that require path-style S3 URLs.",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value("false"), nodx.Text("No"), nodx.If(!destination.ForcePathStyle, nodx.Selected(""))),
+						nodx.Option(nodx.Value("true"), nodx.Text("Yes"), nodx.If(destination.ForcePathStyle, nodx.Selected(""))),
 					},
 				}),
 			),

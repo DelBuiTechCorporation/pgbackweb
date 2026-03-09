@@ -17,6 +17,7 @@ import (
 // createS3Client creates a new S3 client
 func createS3Client(
 	accessKey, secretKey, region, endpoint string,
+	forcePathStyle bool,
 ) (*s3.Client, error) {
 	credentialsProvider := credentials.NewStaticCredentialsProvider(
 		accessKey, secretKey, "",
@@ -43,16 +44,19 @@ func createS3Client(
 		return nil, fmt.Errorf("error initializing storage config: %w", err)
 	}
 
-	s3Client := s3.NewFromConfig(conf)
+	s3Client := s3.NewFromConfig(conf, func(o *s3.Options) {
+		o.UsePathStyle = forcePathStyle
+	})
 	return s3Client, nil
 }
 
 // S3Test tests the connection to S3
 func (Client) S3Test(
 	accessKey, secretKey, region, endpoint, bucketName string,
+	forcePathStyle bool,
 ) error {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint,
+		accessKey, secretKey, region, endpoint, forcePathStyle,
 	)
 	if err != nil {
 		return err
@@ -76,10 +80,11 @@ func (Client) S3Test(
 // Returns the file size, in bytes.
 func (Client) S3Upload(
 	accessKey, secretKey, region, endpoint, bucketName, key string,
+	forcePathStyle bool,
 	fileReader io.Reader,
 ) (int64, error) {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint,
+		accessKey, secretKey, region, endpoint, forcePathStyle,
 	)
 	if err != nil {
 		return 0, err
@@ -124,9 +129,10 @@ func (Client) S3Upload(
 // S3Delete deletes a file from S3
 func (Client) S3Delete(
 	accessKey, secretKey, region, endpoint, bucketName, key string,
+	forcePathStyle bool,
 ) error {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint,
+		accessKey, secretKey, region, endpoint, forcePathStyle,
 	)
 	if err != nil {
 		return err
@@ -151,10 +157,11 @@ func (Client) S3Delete(
 // S3GetDownloadLink generates a presigned URL for downloading a file from S3
 func (Client) S3GetDownloadLink(
 	accessKey, secretKey, region, endpoint, bucketName, key string,
+	forcePathStyle bool,
 	expiration time.Duration,
 ) (string, error) {
 	s3Client, err := createS3Client(
-		accessKey, secretKey, region, endpoint,
+		accessKey, secretKey, region, endpoint, forcePathStyle,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create S3 client: %w", err)
