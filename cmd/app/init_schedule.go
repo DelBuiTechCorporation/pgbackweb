@@ -14,8 +14,13 @@ func initSchedule(cr *cron.Cron, servs *service.Service) {
 
 	servs.ExecutionsService.SoftDeleteExpiredExecutions()
 	servs.AuthService.DeleteOldSessions()
-	servs.DatabasesService.TestAllDatabases()
-	servs.DestinationsService.TestAllDestinations()
+
+	// Run initial health checks in the background so slow/unreachable
+	// dependencies do not block HTTP server startup.
+	go func() {
+		servs.DatabasesService.TestAllDatabases()
+		servs.DestinationsService.TestAllDestinations()
+	}()
 
 	/*
 		Schedules
