@@ -63,6 +63,7 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 			back.DecryptedDestinationAccessKey, back.DecryptedDestinationSecretKey,
 			back.DestinationRegion.String, back.DestinationEndpoint.String,
 			back.DestinationBucketName.String, back.DestinationForcePathStyle.Bool,
+			back.DestinationSignatureVersion.String,
 		)
 		if err != nil {
 			logError(err)
@@ -136,7 +137,9 @@ func (s *Service) RunExecution(ctx context.Context, backupID uuid.UUID) error {
 			back.DecryptedDestinationAccessKey, back.DecryptedDestinationSecretKey,
 			back.DestinationRegion.String, back.DestinationEndpoint.String,
 			back.DestinationBucketName.String, path,
-			back.DestinationForcePathStyle.Bool, dumpReader,
+			back.DestinationForcePathStyle.Bool,
+			back.DestinationSignatureVersion.String,
+			dumpReader,
 		)
 		if err != nil {
 			logError(err)

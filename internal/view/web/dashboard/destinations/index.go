@@ -49,6 +49,7 @@ func indexPage(reqCtx reqctx.Ctx) nodx.Node {
 								nodx.Th(component.SpanText("Bucket name")),
 								nodx.Th(component.SpanText("Endpoint")),
 								nodx.Th(component.SpanText("Region")),
+								nodx.Th(component.SpanText("Signature")),
 								nodx.Th(component.SpanText("Force path")),
 								nodx.Th(component.SpanText("Access key")),
 								nodx.Th(component.SpanText("Secret key")),
@@ -56,7 +57,7 @@ func indexPage(reqCtx reqctx.Ctx) nodx.Node {
 							),
 						),
 						nodx.Tbody(
-							component.SkeletonTr(9),
+							component.SkeletonTr(10),
 							htmx.HxGet(pathutil.BuildPath("/dashboard/destinations/list?page=1")),
 							htmx.HxTrigger("load"),
 						),

@@ -13,13 +13,14 @@ import (
 )
 
 type createDestinationDTO struct {
-	Name       string `form:"name" validate:"required"`
-	BucketName string `form:"bucket_name" validate:"required"`
-	AccessKey  string `form:"access_key" validate:"required"`
-	SecretKey  string `form:"secret_key" validate:"required"`
-	Region     string `form:"region" validate:"required"`
-	Endpoint   string `form:"endpoint" validate:"required"`
-	ForcePathStyle string `form:"force_path_style" validate:"required,oneof=true false"`
+	Name             string `form:"name" validate:"required"`
+	BucketName       string `form:"bucket_name" validate:"required"`
+	AccessKey        string `form:"access_key" validate:"required"`
+	SecretKey        string `form:"secret_key" validate:"required"`
+	Region           string `form:"region" validate:"required"`
+	Endpoint         string `form:"endpoint" validate:"required"`
+	ForcePathStyle   string `form:"force_path_style" validate:"required,oneof=true false"`
+	SignatureVersion string `form:"signature_version" validate:"required,oneof=v2 v4"`
 }
 
 func (h *handlers) createDestinationHandler(c echo.Context) error {
@@ -42,6 +43,7 @@ func (h *handlers) createDestinationHandler(c echo.Context) error {
 			Endpoint:   formData.Endpoint,
 			BucketName: formData.BucketName,
 			ForcePathStyle: formData.ForcePathStyle == "true",
+			SignatureVersion: formData.SignatureVersion,
 		},
 	)
 	if err != nil {
@@ -90,7 +92,7 @@ func createDestinationButton() nodx.Node {
 				component.InputControl(component.InputControlParams{
 					Name:        "endpoint",
 					Label:       "Endpoint",
-					Placeholder: "s3-us-west-1.amazonaws.com",
+					Placeholder: "https://s3-us-west-1.amazonaws.com",
 					Required:    true,
 					Type:        component.InputTypeText,
 				}),
@@ -119,6 +121,17 @@ func createDestinationButton() nodx.Node {
 					Required:    true,
 					Type:        component.InputTypeText,
 					HelpText:    "It will be stored securely using PGP encryption.",
+				}),
+
+				component.SelectControl(component.SelectControlParams{
+					Name:     "signature_version",
+					Label:    "Signature version",
+					Required: true,
+					HelpText: "Default is v4. Use v2 only if your S3 provider requires it.",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value("v4"), nodx.Text("v4"), nodx.Selected("")),
+						nodx.Option(nodx.Value("v2"), nodx.Text("v2")),
+					},
 				}),
 
 				component.SelectControl(component.SelectControlParams{

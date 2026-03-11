@@ -6,6 +6,7 @@ SELECT
   destinations.region AS region,
   destinations.endpoint AS endpoint,
   destinations.force_path_style AS force_path_style,
+  destinations.signature_version AS signature_version,
   destinations.endpoint as destination_endpoint,
   (
     CASE WHEN destinations.access_key IS NOT NULL

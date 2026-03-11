@@ -1,120 +1,105 @@
+# syntax=docker/dockerfile:1.7
+
 FROM golang:1.25-trixie AS golang
 FROM debian:trixie
+
 LABEL org.opencontainers.image.source="https://github.com/eduardolat/pgbackweb"
-# Declare ARG to make it available in the RUN commands
+
+ARG TARGETARCH
 ARG TARGETPLATFORM
-RUN echo "Building for ${TARGETPLATFORM}"
-RUN if [ "${TARGETPLATFORM}" != "linux/amd64" ] && [ "${TARGETPLATFORM}" != "linux/arm64" ]; then \
-        echo "Unsupported architecture: ${TARGETPLATFORM}" && \
-        exit 1; \
-    fi
 
 WORKDIR /app
-ENV DEBIAN_FRONTEND="noninteractive"
-ENV GOBIN="/usr/local/go/bin"
-ENV PATH="$PATH:/usr/local/go/bin"
 
-# Install golang from docker image
+ENV DEBIAN_FRONTEND="noninteractive"
+ENV PATH="${PATH}:/usr/local/go/bin"
+
+# Install Golang from official image
 COPY --from=golang /usr/local/go /usr/local/go
 
-# Install system dependencies and prepare system
-RUN set -e && \
-    # Create a temp dir for downloads
-    mkdir /tmp/downloads && cd /tmp/downloads && \
-    
-    # Add PostgreSQL APT repository
-    # https://www.postgresql.org/download/linux/debian/
+# Validate supported architectures early.
+RUN case "${TARGETARCH}" in \
+        amd64|arm64) echo "Building for ${TARGETPLATFORM}" ;; \
+        *) echo "Unsupported architecture: ${TARGETPLATFORM}" && exit 1 ;; \
+    esac
+
+# Install APT dependencies with cache mounts for faster rebuilds.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    set -e && \
     apt update && apt install -y postgresql-common && \
     /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
-    
-    # Install APT packages
     apt update && apt install -y \
-        wget unzip tzdata git npm \
-        postgresql-client-13 postgresql-client-14 \
-        postgresql-client-15 postgresql-client-16 \
-        postgresql-client-17 postgresql-client-18 && \
-    
-    # Install NodeJS
-    apt install -y npm && \
+        git \
+        npm \
+        tzdata \
+        unzip \
+        wget \
+        postgresql-client-13 \
+        postgresql-client-14 \
+        postgresql-client-15 \
+        postgresql-client-16 \
+        postgresql-client-17 \
+        postgresql-client-18
+
+# Install Node.js and arch-specific tools in a dedicated layer.
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    set -e && \
     npm install -g n@latest && \
     n 22.19.0 && \
-
-    # Install downloadable binaries
-    if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
-        echo "Downloading arm64 binaries" && \
-        # Install task
-        wget --no-verbose https://github.com/go-task/task/releases/download/v3.45.4/task_linux_arm64.tar.gz && \
-        tar -xzf task_linux_arm64.tar.gz && \
-        mv ./task /usr/local/bin/task && \
-        # Install goose
-        wget --no-verbose https://github.com/pressly/goose/releases/download/v3.25.0/goose_linux_arm64 && \
-        mv ./goose_linux_arm64 /usr/local/bin/goose && \
-        # Install sqlc
-        wget --no-verbose https://github.com/sqlc-dev/sqlc/releases/download/v1.30.0/sqlc_1.30.0_linux_arm64.tar.gz && \
-        tar -xzf sqlc_1.30.0_linux_arm64.tar.gz && \
-        mv ./sqlc /usr/local/bin/sqlc && \
-        # Install golangci-lint
-        wget --no-verbose https://github.com/golangci/golangci-lint/releases/download/v2.5.0/golangci-lint-2.5.0-linux-arm64.tar.gz && \
-        tar -xzf golangci-lint-2.5.0-linux-arm64.tar.gz && \
-        mv ./golangci-lint-2.5.0-linux-arm64/golangci-lint /usr/local/bin/golangci-lint; \
-    else \
-        echo "Downloading amd64 binaries" && \
-        # Install task
-        wget --no-verbose https://github.com/go-task/task/releases/download/v3.45.4/task_linux_amd64.tar.gz && \
-        tar -xzf task_linux_amd64.tar.gz && \
-        mv ./task /usr/local/bin/task && \
-        # Install goose
-        wget --no-verbose https://github.com/pressly/goose/releases/download/v3.25.0/goose_linux_x86_64 && \
-        mv ./goose_linux_x86_64 /usr/local/bin/goose && \
-        # Install sqlc
-        wget --no-verbose https://github.com/sqlc-dev/sqlc/releases/download/v1.30.0/sqlc_1.30.0_linux_amd64.tar.gz && \
-        tar -xzf sqlc_1.30.0_linux_amd64.tar.gz && \
-        mv ./sqlc /usr/local/bin/sqlc && \
-        # Install golangci-lint
-        wget --no-verbose https://github.com/golangci/golangci-lint/releases/download/v2.5.0/golangci-lint-2.5.0-linux-amd64.tar.gz && \
-        tar -xzf golangci-lint-2.5.0-linux-amd64.tar.gz && \
-        mv ./golangci-lint-2.5.0-linux-amd64/golangci-lint /usr/local/bin/golangci-lint; \
-    fi && \
-
-    # Make downloaded binaries executable
-    chmod +x /usr/local/bin/* && \
-
-    # Default git config
-    # https://github.com/golangci/golangci-lint/issues/4033
+    mkdir -p /tmp/downloads && cd /tmp/downloads && \
+    case "${TARGETARCH}" in \
+        arm64) \
+            task_pkg="task_linux_arm64.tar.gz" && \
+            goose_bin="goose_linux_arm64" && \
+            sqlc_pkg="sqlc_1.30.0_linux_arm64.tar.gz" && \
+            lint_pkg="golangci-lint-2.5.0-linux-arm64.tar.gz" && \
+            lint_dir="golangci-lint-2.5.0-linux-arm64" ;; \
+        amd64) \
+            task_pkg="task_linux_amd64.tar.gz" && \
+            goose_bin="goose_linux_x86_64" && \
+            sqlc_pkg="sqlc_1.30.0_linux_amd64.tar.gz" && \
+            lint_pkg="golangci-lint-2.5.0-linux-amd64.tar.gz" && \
+            lint_dir="golangci-lint-2.5.0-linux-amd64" ;; \
+    esac && \
+    wget --no-verbose "https://github.com/go-task/task/releases/download/v3.45.4/${task_pkg}" && \
+    tar -xzf "${task_pkg}" && \
+    mv ./task /usr/local/bin/task && \
+    wget --no-verbose "https://github.com/pressly/goose/releases/download/v3.25.0/${goose_bin}" && \
+    mv "./${goose_bin}" /usr/local/bin/goose && \
+    wget --no-verbose "https://github.com/sqlc-dev/sqlc/releases/download/v1.30.0/${sqlc_pkg}" && \
+    tar -xzf "${sqlc_pkg}" && \
+    mv ./sqlc /usr/local/bin/sqlc && \
+    wget --no-verbose "https://github.com/golangci/golangci-lint/releases/download/v2.5.0/${lint_pkg}" && \
+    tar -xzf "${lint_pkg}" && \
+    mv "./${lint_dir}/golangci-lint" /usr/local/bin/golangci-lint && \
+    chmod +x /usr/local/bin/task /usr/local/bin/goose /usr/local/bin/sqlc /usr/local/bin/golangci-lint && \
     git config --global --add safe.directory '*' && \
+    rm -rf /tmp/downloads
 
-    # Clean up downloads and APT cache
-    mkdir -p /app && cd /app && rm -rf /tmp/downloads && \
-    rm -rf /var/lib/apt/lists/* && \
+# Keep compatibility with previous image behavior.
+RUN mkdir -p /backups && chmod 777 /backups
 
-    # Create backups dir
-    mkdir /backups && \
-    chmod 777 /backups
+# Copy and install Node dependencies first for better layer cache hit.
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci
 
-##############
-# START HERE #
-##############
+# Copy and install Go dependencies first for better layer cache hit.
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/root/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    go mod download
 
-# Copy and install node dependencies
-COPY package.json .
-COPY package-lock.json .
-RUN npm install
-
-# Copy and install go dependencies
-COPY go.mod .
-COPY go.sum .
-RUN go mod download
-
-# Copy the rest of the files
+# Copy source code only after dependency layers.
 COPY . .
 
-# Build the app
-RUN set -e && \
+# Build app with Go caches mounted for faster incremental builds.
+RUN --mount=type=cache,target=/root/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    set -e && \
     task fixperms && \
     task build && \
     cp ./dist/change-password /usr/local/bin/change-password && \
     chmod +x /usr/local/bin/change-password
 
-# Run the app
 EXPOSE 8085
 CMD ["task", "servem"]

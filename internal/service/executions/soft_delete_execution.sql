@@ -10,6 +10,7 @@ SELECT
   destinations.region as destination_region,
   destinations.endpoint as destination_endpoint,
   destinations.force_path_style as destination_force_path_style,
+  destinations.signature_version as destination_signature_version,
   (
     CASE WHEN destinations.access_key IS NOT NULL
     THEN pgp_sym_decrypt(destinations.access_key, sqlc.arg('encryption_key')::TEXT)

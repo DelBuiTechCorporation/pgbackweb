@@ -39,7 +39,8 @@ func (s *Service) GetExecutionDownloadLinkOrPath(
 	link, err := s.ints.StorageClient.S3GetDownloadLink(
 		data.DecryptedAccessKey, data.DecryptedSecretKey, data.Region.String,
 		data.Endpoint.String, data.BucketName.String, data.Path.String,
-		data.ForcePathStyle.Bool, time.Hour*12,
+		data.ForcePathStyle.Bool, data.SignatureVersion.String,
+		time.Hour * 12,
 	)
 	if err != nil {
 		return false, "", err

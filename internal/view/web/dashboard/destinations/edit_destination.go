@@ -39,6 +39,7 @@ func (h *handlers) editDestinationHandler(c echo.Context) error {
 			Region:     sql.NullString{String: formData.Region, Valid: true},
 			Endpoint:   sql.NullString{String: formData.Endpoint, Valid: true},
 			ForcePathStyle: sql.NullBool{Bool: formData.ForcePathStyle == "true", Valid: true},
+			SignatureVersion: sql.NullString{String: formData.SignatureVersion, Valid: true},
 			AccessKey:  sql.NullString{String: formData.AccessKey, Valid: true},
 			SecretKey:  sql.NullString{String: formData.SecretKey, Valid: true},
 		},
@@ -102,11 +103,22 @@ func editDestinationButton(
 				component.InputControl(component.InputControlParams{
 					Name:        "endpoint",
 					Label:       "Endpoint",
-					Placeholder: "s3-us-west-1.amazonaws.com",
+					Placeholder: "https://s3-us-west-1.amazonaws.com",
 					Required:    true,
 					Type:        component.InputTypeText,
 					Children: []nodx.Node{
 						nodx.Value(destination.Endpoint),
+					},
+				}),
+
+				component.SelectControl(component.SelectControlParams{
+					Name:     "signature_version",
+					Label:    "Signature version",
+					Required: true,
+					HelpText: "Default is v4. Use v2 only if your S3 provider requires it.",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value("v4"), nodx.Text("v4"), nodx.If(destination.SignatureVersion == "v4", nodx.Selected(""))),
+						nodx.Option(nodx.Value("v2"), nodx.Text("v2"), nodx.If(destination.SignatureVersion == "v2", nodx.Selected(""))),
 					},
 				}),
 

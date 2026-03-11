@@ -6,6 +6,7 @@ SET
   region = COALESCE(sqlc.narg('region'), region),
   endpoint = COALESCE(sqlc.narg('endpoint'), endpoint),
   force_path_style = COALESCE(sqlc.narg('force_path_style'), force_path_style),
+  signature_version = COALESCE(sqlc.narg('signature_version'), signature_version),
   access_key = CASE
     WHEN sqlc.narg('access_key')::TEXT IS NOT NULL
     THEN pgp_sym_encrypt(sqlc.narg('access_key')::TEXT, sqlc.arg('encryption_key')::TEXT)

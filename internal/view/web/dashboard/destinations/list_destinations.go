@@ -109,6 +109,7 @@ func listDestinations(
 					component.SpanText(destination.Region),
 				),
 			),
+			nodx.Td(component.SpanText(destination.SignatureVersion)),
 			nodx.Td(component.SpanText(map[bool]string{true: "Yes", false: "No"}[destination.ForcePathStyle])),
 			nodx.Td(
 				nodx.Div(
