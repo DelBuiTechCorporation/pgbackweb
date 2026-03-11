@@ -3,9 +3,11 @@ package backups
 import (
 	"database/sql"
 	"fmt"
+	"net/http"
 
 	"github.com/eduardolat/pgbackweb/internal/database/dbgen"
 	"github.com/eduardolat/pgbackweb/internal/staticdata"
+	"github.com/eduardolat/pgbackweb/internal/util/echoutil"
 	"github.com/eduardolat/pgbackweb/internal/util/pathutil"
 	"github.com/eduardolat/pgbackweb/internal/validate"
 	"github.com/eduardolat/pgbackweb/internal/view/web/component"
@@ -13,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	nodx "github.com/nodxdev/nodxgo"
+	alpine "github.com/nodxdev/nodxgo-alpine"
 	htmx "github.com/nodxdev/nodxgo-htmx"
 	lucide "github.com/nodxdev/nodxgo-lucide"
 )
@@ -26,18 +29,20 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 	}
 
 	var formData struct {
-		Name           string `form:"name" validate:"required"`
-		CronExpression string `form:"cron_expression" validate:"required"`
-		TimeZone       string `form:"time_zone" validate:"required"`
-		IsActive       string `form:"is_active" validate:"required,oneof=true false"`
-		DestDir        string `form:"dest_dir" validate:"required"`
-		RetentionDays  int16  `form:"retention_days"`
-		OptDataOnly    string `form:"opt_data_only" validate:"required,oneof=true false"`
-		OptSchemaOnly  string `form:"opt_schema_only" validate:"required,oneof=true false"`
-		OptClean       string `form:"opt_clean" validate:"required,oneof=true false"`
-		OptIfExists    string `form:"opt_if_exists" validate:"required,oneof=true false"`
-		OptCreate      string `form:"opt_create" validate:"required,oneof=true false"`
-		OptNoComments  string `form:"opt_no_comments" validate:"required,oneof=true false"`
+		Name           string    `form:"name" validate:"required"`
+		CronExpression string    `form:"cron_expression" validate:"required"`
+		TimeZone       string    `form:"time_zone" validate:"required"`
+		IsActive       string    `form:"is_active" validate:"required,oneof=true false"`
+		DestDir        string    `form:"dest_dir" validate:"required"`
+		RetentionDays  int16     `form:"retention_days"`
+		OptDataOnly    string    `form:"opt_data_only" validate:"required,oneof=true false"`
+		OptSchemaOnly  string    `form:"opt_schema_only" validate:"required,oneof=true false"`
+		OptClean       string    `form:"opt_clean" validate:"required,oneof=true false"`
+		OptIfExists    string    `form:"opt_if_exists" validate:"required,oneof=true false"`
+		OptCreate      string    `form:"opt_create" validate:"required,oneof=true false"`
+		OptNoComments  string    `form:"opt_no_comments" validate:"required,oneof=true false"`
+		IsLocal        string    `form:"is_local" validate:"required,oneof=true false"`
+		DestinationID  uuid.UUID `form:"destination_id" validate:"omitempty,uuid"`
 	}
 	if err := c.Bind(&formData); err != nil {
 		return respondhtmx.ToastError(c, err.Error())
@@ -61,6 +66,10 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 			OptIfExists:    sql.NullBool{Bool: formData.OptIfExists == "true", Valid: true},
 			OptCreate:      sql.NullBool{Bool: formData.OptCreate == "true", Valid: true},
 			OptNoComments:  sql.NullBool{Bool: formData.OptNoComments == "true", Valid: true},
+			IsLocal:        sql.NullBool{Bool: formData.IsLocal == "true", Valid: true},
+			DestinationID: uuid.NullUUID{
+				Valid: formData.IsLocal == "false", UUID: formData.DestinationID,
+			},
 		},
 	)
 	if err != nil {
@@ -70,7 +79,45 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 	return respondhtmx.AlertWithRefresh(c, "Backup task updated")
 }
 
+func (h *handlers) getEditBackupFormHandler(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	backupID, err := uuid.Parse(c.Param("backupID"))
+	if err != nil {
+		return respondhtmx.ToastError(c, err.Error())
+	}
+
+	backup, err := h.servs.BackupsService.GetBackup(ctx, backupID)
+	if err != nil {
+		return respondhtmx.ToastError(c, err.Error())
+	}
+
+	destinations, err := h.servs.DestinationsService.GetAllDestinations(ctx)
+	if err != nil {
+		return respondhtmx.ToastError(c, err.Error())
+	}
+
+	return echoutil.RenderNodx(
+		c, http.StatusOK, editBackupModal(backup, destinations),
+	)
+}
+
 func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
+	return component.OptionsDropdownButton(
+		htmx.HxGet(pathutil.BuildPath(
+			fmt.Sprintf("/dashboard/backups/%s/edit-form", backup.ID),
+		)),
+		htmx.HxTarget("body"),
+		htmx.HxSwap("beforeend"),
+		lucide.Pencil(),
+		component.SpanText("Edit backup task"),
+	)
+}
+
+func editBackupModal(
+	backup dbgen.Backup,
+	destinations []dbgen.DestinationsServiceGetAllDestinationsRow,
+) nodx.Node {
 	yesNoOptions := func(value bool) nodx.Node {
 		return nodx.Group(
 			nodx.Option(
@@ -94,6 +141,10 @@ func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
 				htmx.HxPost(pathutil.BuildPath(fmt.Sprintf("/dashboard/backups/%s/edit", backup.ID))),
 				htmx.HxDisabledELT("find button"),
 				nodx.Class("space-y-2 text-base"),
+
+				alpine.XData(`{
+					is_local: ` + fmt.Sprintf("%v", backup.IsLocal) + `,
+				}`),
 
 				component.InputControl(component.InputControlParams{
 					Name:        "name",
@@ -181,6 +232,51 @@ func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
 					},
 				}),
 
+				component.SelectControl(component.SelectControlParams{
+					Name:     "is_local",
+					Label:    "Local backup",
+					Required: true,
+					Children: []nodx.Node{
+						alpine.XModel("is_local"),
+						nodx.Option(
+							nodx.Value("true"),
+							nodx.Text("Yes"),
+							nodx.If(backup.IsLocal, nodx.Selected("")),
+						),
+						nodx.Option(
+							nodx.Value("false"),
+							nodx.Text("No"),
+							nodx.If(!backup.IsLocal, nodx.Selected("")),
+						),
+					},
+					HelpButtonChildren: localBackupsHelp(),
+				}),
+
+				alpine.Template(
+					alpine.XIf("is_local == 'false'"),
+					component.SelectControl(component.SelectControlParams{
+						Name:        "destination_id",
+						Label:       "Destination",
+						Required:    true,
+						Placeholder: "Select a destination",
+						Children: []nodx.Node{
+							nodx.Map(
+								destinations,
+								func(dest dbgen.DestinationsServiceGetAllDestinationsRow) nodx.Node {
+									return nodx.Option(
+										nodx.Value(dest.ID.String()),
+										nodx.Text(dest.Name),
+										nodx.If(
+											backup.DestinationID.Valid && backup.DestinationID.UUID == dest.ID,
+											nodx.Selected(""),
+										),
+									)
+								},
+							),
+						},
+					}),
+				),
+
 				nodx.Div(
 					nodx.Class("pt-4"),
 					nodx.Div(
@@ -266,10 +362,5 @@ func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
 
 	return nodx.Div(
 		mo.HTML,
-		component.OptionsDropdownButton(
-			mo.OpenerAttr,
-			lucide.Pencil(),
-			component.SpanText("Edit backup task"),
-		),
 	)
 }

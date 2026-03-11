@@ -12,6 +12,8 @@ SET
   opt_clean = COALESCE(sqlc.narg('opt_clean'), opt_clean),
   opt_if_exists = COALESCE(sqlc.narg('opt_if_exists'), opt_if_exists),
   opt_create = COALESCE(sqlc.narg('opt_create'), opt_create),
-  opt_no_comments = COALESCE(sqlc.narg('opt_no_comments'), opt_no_comments)
+  opt_no_comments = COALESCE(sqlc.narg('opt_no_comments'), opt_no_comments),
+  is_local = COALESCE(sqlc.narg('is_local'), is_local),
+  destination_id = sqlc.narg('destination_id')
 WHERE id = @id
 RETURNING *;
