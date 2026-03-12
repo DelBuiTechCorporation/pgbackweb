@@ -3,10 +3,12 @@ package postgres
 import (
 	"archive/zip"
 	"bytes"
+	"compress/flate"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/eduardolat/pgbackweb/internal/util/strutil"
 	"github.com/orsinium-labs/enum"
@@ -187,9 +189,10 @@ func (Client) Dump(
 }
 
 // DumpZip runs the pg_dump command with the given parameters and returns the
-// ZIP-compressed SQL dump as an io.Reader.
+// ZIP-compressed SQL dump as an io.Reader. compressionLevel follows compress/flate
+// levels (0=Store, 1=BestSpeed … 9=BestCompression). Use -1 for default level (6).
 func (c *Client) DumpZip(
-	version PGVersion, connString string, params ...DumpParams,
+	version PGVersion, connString string, compressionLevel int, params ...DumpParams,
 ) io.Reader {
 	dumpReader := c.Dump(version, connString, params...)
 	reader, writer := io.Pipe()
@@ -198,9 +201,22 @@ func (c *Client) DumpZip(
 		defer writer.Close()
 
 		zipWriter := zip.NewWriter(writer)
+		if compressionLevel != 0 {
+			level := compressionLevel
+			zipWriter.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
+				return flate.NewWriter(out, level)
+			})
+		}
 		defer zipWriter.Close()
 
-		fileWriter, err := zipWriter.Create("dump.sql")
+		method := zip.Deflate
+		if compressionLevel == 0 {
+			method = zip.Store
+		}
+		fileWriter, err := zipWriter.CreateHeader(&zip.FileHeader{
+			Name:   "dump.sql",
+			Method: method,
+		})
 		if err != nil {
 			writer.CloseWithError(fmt.Errorf("error creating zip file: %w", err))
 			return
@@ -213,6 +229,215 @@ func (c *Client) DumpZip(
 	}()
 
 	return reader
+}
+
+// ZipPart represents a single ZIP file part created by DumpZipParts.
+type ZipPart struct {
+	FilePath string
+	Size     int64
+}
+
+// countingWriter wraps an io.Writer and counts the total bytes written to it.
+type countingWriter struct {
+	w     io.Writer
+	count int64
+}
+
+func (cw *countingWriter) Write(p []byte) (int, error) {
+	n, err := cw.w.Write(p)
+	cw.count += int64(n)
+	return n, err
+}
+
+// DumpZipParts runs pg_dump and splits the output into multiple ZIP files,
+// each at most maxPartSize compressed bytes. compressionLevel follows compress/flate
+// levels (0=Store, 1=BestSpeed … 9=BestCompression). Use -1 for default level (6).
+// The parts are stored as temp files in a new temp directory. The caller MUST defer
+// os.RemoveAll(tempDir) after all parts have been consumed.
+//
+// Returns the list of parts, the temp directory path, and any error.
+func (c *Client) DumpZipParts(
+	version PGVersion, connString string, maxPartSize int64, compressionLevel int, params ...DumpParams,
+) ([]ZipPart, string, error) {
+	dumpReader := c.Dump(version, connString, params...)
+
+	workDir, err := os.MkdirTemp("", "pbw-parts-*")
+	if err != nil {
+		return nil, "", fmt.Errorf("error creating temp dir: %w", err)
+	}
+
+	const safetyMargin = 2 * 1024 * 1024 // 2MB to absorb deflate internal buffering
+	buf := make([]byte, 64*1024)          // 64KB read buffer
+	var parts []ZipPart
+	partNum := 1
+	dumpDone := false
+
+	for !dumpDone {
+		partPath := strutil.CreatePath(true, workDir, fmt.Sprintf("part-%03d.zip", partNum))
+		partFile, err := os.Create(partPath)
+		if err != nil {
+			return parts, workDir, fmt.Errorf("error creating part file: %w", err)
+		}
+
+		cw := &countingWriter{w: partFile}
+		zw := zip.NewWriter(cw)
+		if compressionLevel != 0 {
+			level := compressionLevel
+			zw.RegisterCompressor(zip.Deflate, func(out io.Writer) (io.WriteCloser, error) {
+				return flate.NewWriter(out, level)
+			})
+		}
+
+		method := zip.Deflate
+		if compressionLevel == 0 {
+			method = zip.Store
+		}
+		fw, err := zw.CreateHeader(&zip.FileHeader{
+			Name:   fmt.Sprintf("dump-%03d.sql", partNum),
+			Method: method,
+		})
+		if err != nil {
+			partFile.Close()
+			return parts, workDir, fmt.Errorf("error creating zip entry: %w", err)
+		}
+
+		for cw.count < maxPartSize-safetyMargin {
+			n, readErr := dumpReader.Read(buf)
+			if n > 0 {
+				if _, writeErr := fw.Write(buf[:n]); writeErr != nil {
+					partFile.Close()
+					return parts, workDir, fmt.Errorf("error writing to zip: %w", writeErr)
+				}
+			}
+			if readErr == io.EOF {
+				dumpDone = true
+				break
+			}
+			if readErr != nil {
+				partFile.Close()
+				return parts, workDir, fmt.Errorf("error reading dump: %w", readErr)
+			}
+		}
+
+		if err := zw.Close(); err != nil {
+			partFile.Close()
+			return parts, workDir, fmt.Errorf("error closing zip writer: %w", err)
+		}
+		partFile.Close()
+
+		fi, err := os.Stat(partPath)
+		if err != nil {
+			return parts, workDir, fmt.Errorf("error stating part file: %w", err)
+		}
+		if fi.Size() == 0 {
+			// Empty part: dump ended exactly on a part boundary
+			os.Remove(partPath)
+			break
+		}
+
+		parts = append(parts, ZipPart{FilePath: partPath, Size: fi.Size()})
+		partNum++
+	}
+
+	return parts, workDir, nil
+}
+
+// extractFirstSQLFromZip extracts the first .sql file found in the ZIP to destPath.
+func extractFirstSQLFromZip(zipPath, destPath string) error {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return fmt.Errorf("error opening zip: %w", err)
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		if strings.HasSuffix(f.Name, ".sql") {
+			rc, err := f.Open()
+			if err != nil {
+				return fmt.Errorf("error opening zip entry: %w", err)
+			}
+			defer rc.Close()
+
+			outFile, err := os.Create(destPath)
+			if err != nil {
+				return fmt.Errorf("error creating output file: %w", err)
+			}
+			defer outFile.Close()
+
+			if _, err := io.Copy(outFile, rc); err != nil {
+				return fmt.Errorf("error extracting zip entry: %w", err)
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("no .sql file found in zip: %s", zipPath)
+}
+
+// RestoreZipParts downloads or copies multiple ZIP parts (each containing a SQL
+// chunk), concatenates all chunks, and runs psql to restore the database.
+// Supports both single-file (legacy) and multi-part backups.
+func (Client) RestoreZipParts(
+	version PGVersion, connString string, isLocal bool, zipURLsOrPaths []string,
+) error {
+	workDir, err := os.MkdirTemp("", "pbw-restore-*")
+	if err != nil {
+		return fmt.Errorf("error creating temp dir: %w", err)
+	}
+	defer os.RemoveAll(workDir)
+
+	var sqlFiles []string
+	for i, urlOrPath := range zipURLsOrPaths {
+		zipPath := strutil.CreatePath(true, workDir, fmt.Sprintf("part-%03d.zip", i+1))
+
+		if isLocal {
+			cmd := exec.Command("cp", urlOrPath, zipPath)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("error copying part %d to temp dir: %s", i+1, output)
+			}
+		} else {
+			cmd := exec.Command("wget", "--no-verbose", "-O", zipPath, urlOrPath)
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return fmt.Errorf("error downloading part %d: %s", i+1, output)
+			}
+		}
+
+		if _, statErr := os.Stat(zipPath); os.IsNotExist(statErr) {
+			return fmt.Errorf("part %d zip file not found after download/copy", i+1)
+		}
+
+		sqlFile := strutil.CreatePath(true, workDir, fmt.Sprintf("chunk-%03d.sql", i+1))
+		if err := extractFirstSQLFromZip(zipPath, sqlFile); err != nil {
+			return fmt.Errorf("error extracting part %d: %w", i+1, err)
+		}
+		sqlFiles = append(sqlFiles, sqlFile)
+	}
+
+	// Concatenate all SQL chunks into a single dump file
+	dumpPath := strutil.CreatePath(true, workDir, "dump.sql")
+	catArgs := append([]string{}, sqlFiles...)
+	catCmd := exec.Command("cat", catArgs...)
+	dumpFile, err := os.Create(dumpPath)
+	if err != nil {
+		return fmt.Errorf("error creating merged dump file: %w", err)
+	}
+	catCmd.Stdout = dumpFile
+	if mergeErr := catCmd.Run(); mergeErr != nil {
+		dumpFile.Close()
+		return fmt.Errorf("error merging SQL chunks: %w", mergeErr)
+	}
+	dumpFile.Close()
+
+	cmd := exec.Command(version.Value.PSQL, connString, "-f", dumpPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf(
+			"error running psql v%s command: %s",
+			version.Value.Version, output,
+		)
+	}
+	return nil
 }
 
 // RestoreZip downloads or copies the ZIP from the given url or path, unzips it,

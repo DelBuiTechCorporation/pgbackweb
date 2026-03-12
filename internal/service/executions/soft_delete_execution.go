@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/eduardolat/pgbackweb/internal/database/dbgen"
+	"github.com/eduardolat/pgbackweb/internal/util/strutil"
 	"github.com/google/uuid"
 )
 
@@ -25,23 +26,25 @@ func (s *Service) SoftDeleteExecution(
 		return err
 	}
 
-	if execution.ExecutionPath.Valid && !execution.BackupIsLocal {
-		err := s.ints.StorageClient.S3Delete(
-			execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
-			execution.DestinationRegion.String, execution.DestinationEndpoint.String,
-			execution.DestinationBucketName.String, execution.ExecutionPath.String,
-			execution.DestinationForcePathStyle.Bool,
-			execution.DestinationSignatureVersion.String,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	if execution.ExecutionPath.Valid && execution.BackupIsLocal {
-		err := s.ints.StorageClient.LocalDelete(execution.ExecutionPath.String)
-		if err != nil {
-			return err
+	if execution.ExecutionPath.Valid {
+		for _, p := range strutil.ParseJSONStringArray(execution.ExecutionPath.String) {
+			if !execution.BackupIsLocal {
+				err := s.ints.StorageClient.S3Delete(
+					execution.DecryptedDestinationAccessKey, execution.DecryptedDestinationSecretKey,
+					execution.DestinationRegion.String, execution.DestinationEndpoint.String,
+					execution.DestinationBucketName.String, p,
+					execution.DestinationForcePathStyle.Bool,
+					execution.DestinationSignatureVersion.String,
+				)
+				if err != nil {
+					return err
+				}
+			} else {
+				err := s.ints.StorageClient.LocalDelete(p)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 

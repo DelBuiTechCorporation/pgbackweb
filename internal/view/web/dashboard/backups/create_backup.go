@@ -23,21 +23,23 @@ func (h *handlers) createBackupHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	var formData struct {
-		DatabaseID     uuid.UUID `form:"database_id" validate:"required,uuid"`
-		DestinationID  uuid.UUID `form:"destination_id" validate:"omitempty,uuid"`
-		IsLocal        string    `form:"is_local" validate:"required,oneof=true false"`
-		Name           string    `form:"name" validate:"required"`
-		CronExpression string    `form:"cron_expression" validate:"required"`
-		TimeZone       string    `form:"time_zone" validate:"required"`
-		IsActive       string    `form:"is_active" validate:"required,oneof=true false"`
-		DestDir        string    `form:"dest_dir" validate:"required"`
-		RetentionDays  int16     `form:"retention_days"`
-		OptDataOnly    string    `form:"opt_data_only" validate:"required,oneof=true false"`
-		OptSchemaOnly  string    `form:"opt_schema_only" validate:"required,oneof=true false"`
-		OptClean       string    `form:"opt_clean" validate:"required,oneof=true false"`
-		OptIfExists    string    `form:"opt_if_exists" validate:"required,oneof=true false"`
-		OptCreate      string    `form:"opt_create" validate:"required,oneof=true false"`
-		OptNoComments  string    `form:"opt_no_comments" validate:"required,oneof=true false"`
+		DatabaseID       uuid.UUID `form:"database_id" validate:"required,uuid"`
+		DestinationID    uuid.UUID `form:"destination_id" validate:"omitempty,uuid"`
+		IsLocal          string    `form:"is_local" validate:"required,oneof=true false"`
+		Name             string    `form:"name" validate:"required"`
+		CronExpression   string    `form:"cron_expression" validate:"required"`
+		TimeZone         string    `form:"time_zone" validate:"required"`
+		IsActive         string    `form:"is_active" validate:"required,oneof=true false"`
+		DestDir          string    `form:"dest_dir" validate:"required"`
+		RetentionDays    int16     `form:"retention_days"`
+		OptDataOnly      string    `form:"opt_data_only" validate:"required,oneof=true false"`
+		OptSchemaOnly    string    `form:"opt_schema_only" validate:"required,oneof=true false"`
+		OptClean         string    `form:"opt_clean" validate:"required,oneof=true false"`
+		OptIfExists      string    `form:"opt_if_exists" validate:"required,oneof=true false"`
+		OptCreate        string    `form:"opt_create" validate:"required,oneof=true false"`
+		OptNoComments    string    `form:"opt_no_comments" validate:"required,oneof=true false"`
+		MaxPartSizeMb    string    `form:"max_part_size_mb"`
+		CompressionLevel string    `form:"compression_level"`
 	}
 	if err := c.Bind(&formData); err != nil {
 		return respondhtmx.ToastError(c, err.Error())
@@ -65,6 +67,8 @@ func (h *handlers) createBackupHandler(c echo.Context) error {
 			OptIfExists:    formData.OptIfExists == "true",
 			OptCreate:      formData.OptCreate == "true",
 			OptNoComments:  formData.OptNoComments == "true",
+			MaxPartSizeMb:  parseNullInt32(formData.MaxPartSizeMb),
+			CompressionLevel: parseNullInt16(formData.CompressionLevel),
 		},
 	)
 	if err != nil {
@@ -233,6 +237,42 @@ func createBackupForm(
 				nodx.Option(nodx.Value("false"), nodx.Text("No")),
 			},
 		}),
+
+		nodx.Div(
+			nodx.Class("pt-4"),
+			nodx.Div(
+				nodx.Class("flex justify-start items-center space-x-1"),
+				component.H2Text("File management"),
+			),
+			nodx.Div(
+				nodx.Class("mt-2 grid grid-cols-2 gap-2"),
+				component.SelectControl(component.SelectControlParams{
+					Name:     "compression_level",
+					Label:    "Compression level",
+					Required: false,
+					HelpText: "ZIP compression level. Default is best compression",
+					Children: []nodx.Node{
+						nodx.Option(nodx.Value(""), nodx.Text("Default (best)"), nodx.Selected("")),
+						nodx.Option(nodx.Value("9"), nodx.Text("Best (9)")),
+						nodx.Option(nodx.Value("6"), nodx.Text("Balanced (6)")),
+						nodx.Option(nodx.Value("1"), nodx.Text("Fastest (1)")),
+						nodx.Option(nodx.Value("0"), nodx.Text("None (store only)")),
+					},
+				}),
+				component.InputControl(component.InputControlParams{
+					Name:        "max_part_size_mb",
+					Label:       "Max part size (MB)",
+					Placeholder: "Leave empty for single file",
+					Required:    false,
+					Type:        component.InputTypeNumber,
+					HelpText:    "Split backup into parts of this size. Leave empty to keep as a single file",
+					Children: []nodx.Node{
+						nodx.Min("1"),
+						nodx.Max("10000"),
+					},
+				}),
+			),
+		),
 
 		nodx.Div(
 			nodx.Class("pt-4"),

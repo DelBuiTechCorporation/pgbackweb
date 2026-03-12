@@ -116,7 +116,7 @@ func (s *Service) RunRestoration(
 		})
 	}
 
-	isLocal, zipURLOrPath, err := s.executionsService.GetExecutionDownloadLinkOrPath(
+	isLocal, zipURLsOrPaths, err := s.executionsService.GetAllExecutionLinksOrPaths(
 		ctx, executionID,
 	)
 	if err != nil {
@@ -129,8 +129,8 @@ func (s *Service) RunRestoration(
 		})
 	}
 
-	err = s.ints.PGClient.RestoreZip(
-		pgVersion, connString, isLocal, zipURLOrPath,
+	err = s.ints.PGClient.RestoreZipParts(
+		pgVersion, connString, isLocal, zipURLsOrPaths,
 	)
 	if err != nil {
 		logError(err)

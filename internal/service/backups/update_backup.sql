@@ -14,6 +14,8 @@ SET
   opt_create = COALESCE(sqlc.narg('opt_create'), opt_create),
   opt_no_comments = COALESCE(sqlc.narg('opt_no_comments'), opt_no_comments),
   is_local = COALESCE(sqlc.narg('is_local'), is_local),
-  destination_id = sqlc.narg('destination_id')
+  destination_id = sqlc.narg('destination_id'),
+  max_part_size_mb = sqlc.narg('max_part_size_mb'),
+  compression_level = sqlc.narg('compression_level')
 WHERE id = @id
 RETURNING *;

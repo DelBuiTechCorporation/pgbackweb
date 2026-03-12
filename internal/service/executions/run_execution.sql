@@ -9,6 +9,8 @@ SELECT
   backups.opt_if_exists as backup_opt_if_exists,
   backups.opt_create as backup_opt_create,	
   backups.opt_no_comments as backup_opt_no_comments,
+  backups.max_part_size_mb as backup_max_part_size_mb,
+  backups.compression_level as backup_compression_level,
 
   pgp_sym_decrypt(databases.connection_string, @encryption_key) AS decrypted_database_connection_string,
   databases.pg_version as database_pg_version,

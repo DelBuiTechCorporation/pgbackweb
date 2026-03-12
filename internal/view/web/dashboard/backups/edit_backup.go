@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/eduardolat/pgbackweb/internal/database/dbgen"
 	"github.com/eduardolat/pgbackweb/internal/staticdata"
@@ -29,20 +30,22 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 	}
 
 	var formData struct {
-		Name           string    `form:"name" validate:"required"`
-		CronExpression string    `form:"cron_expression" validate:"required"`
-		TimeZone       string    `form:"time_zone" validate:"required"`
-		IsActive       string    `form:"is_active" validate:"required,oneof=true false"`
-		DestDir        string    `form:"dest_dir" validate:"required"`
-		RetentionDays  int16     `form:"retention_days"`
-		OptDataOnly    string    `form:"opt_data_only" validate:"required,oneof=true false"`
-		OptSchemaOnly  string    `form:"opt_schema_only" validate:"required,oneof=true false"`
-		OptClean       string    `form:"opt_clean" validate:"required,oneof=true false"`
-		OptIfExists    string    `form:"opt_if_exists" validate:"required,oneof=true false"`
-		OptCreate      string    `form:"opt_create" validate:"required,oneof=true false"`
-		OptNoComments  string    `form:"opt_no_comments" validate:"required,oneof=true false"`
-		IsLocal        string    `form:"is_local" validate:"required,oneof=true false"`
-		DestinationID  uuid.UUID `form:"destination_id" validate:"omitempty,uuid"`
+		Name             string    `form:"name" validate:"required"`
+		CronExpression   string    `form:"cron_expression" validate:"required"`
+		TimeZone         string    `form:"time_zone" validate:"required"`
+		IsActive         string    `form:"is_active" validate:"required,oneof=true false"`
+		DestDir          string    `form:"dest_dir" validate:"required"`
+		RetentionDays    int16     `form:"retention_days"`
+		OptDataOnly      string    `form:"opt_data_only" validate:"required,oneof=true false"`
+		OptSchemaOnly    string    `form:"opt_schema_only" validate:"required,oneof=true false"`
+		OptClean         string    `form:"opt_clean" validate:"required,oneof=true false"`
+		OptIfExists      string    `form:"opt_if_exists" validate:"required,oneof=true false"`
+		OptCreate        string    `form:"opt_create" validate:"required,oneof=true false"`
+		OptNoComments    string    `form:"opt_no_comments" validate:"required,oneof=true false"`
+		IsLocal          string    `form:"is_local" validate:"required,oneof=true false"`
+		DestinationID    uuid.UUID `form:"destination_id" validate:"omitempty,uuid"`
+		MaxPartSizeMb    string    `form:"max_part_size_mb"`
+		CompressionLevel string    `form:"compression_level"`
 	}
 	if err := c.Bind(&formData); err != nil {
 		return respondhtmx.ToastError(c, err.Error())
@@ -70,6 +73,8 @@ func (h *handlers) editBackupHandler(c echo.Context) error {
 			DestinationID: uuid.NullUUID{
 				Valid: formData.IsLocal == "false", UUID: formData.DestinationID,
 			},
+			MaxPartSizeMb:    parseNullInt32(formData.MaxPartSizeMb),
+			CompressionLevel: parseNullInt16(formData.CompressionLevel),
 		},
 	)
 	if err != nil {
@@ -98,23 +103,38 @@ func (h *handlers) getEditBackupFormHandler(c echo.Context) error {
 	}
 
 	return echoutil.RenderNodx(
-		c, http.StatusOK, editBackupModal(backup, destinations),
+		c, http.StatusOK, editBackupForm(backup, destinations),
 	)
 }
 
 func editBackupButton(backup dbgen.BackupsServicePaginateBackupsRow) nodx.Node {
-	return component.OptionsDropdownButton(
-		htmx.HxGet(pathutil.BuildPath(
-			fmt.Sprintf("/dashboard/backups/%s/edit-form", backup.ID),
-		)),
-		htmx.HxTarget("body"),
-		htmx.HxSwap("beforeend"),
-		lucide.Pencil(),
-		component.SpanText("Edit backup task"),
+	mo := component.Modal(component.ModalParams{
+		Size:  component.SizeLg,
+		Title: "Edit backup task",
+		Content: []nodx.Node{
+			nodx.Div(
+				htmx.HxGet(pathutil.BuildPath(
+					fmt.Sprintf("/dashboard/backups/%s/edit-form", backup.ID),
+				)),
+				htmx.HxSwap("outerHTML"),
+				htmx.HxTrigger("intersect once"),
+				nodx.Class("p-10 flex justify-center"),
+				component.HxLoadingMd(),
+			),
+		},
+	})
+
+	return nodx.Div(
+		mo.HTML,
+		component.OptionsDropdownButton(
+			mo.OpenerAttr,
+			lucide.Pencil(),
+			component.SpanText("Edit backup task"),
+		),
 	)
 }
 
-func editBackupModal(
+func editBackupForm(
 	backup dbgen.Backup,
 	destinations []dbgen.DestinationsServiceGetAllDestinationsRow,
 ) nodx.Node {
@@ -133,16 +153,12 @@ func editBackupModal(
 		)
 	}
 
-	mo := component.Modal(component.ModalParams{
-		Size:  component.SizeLg,
-		Title: "Edit backup task",
-		Content: []nodx.Node{
-			nodx.FormEl(
-				htmx.HxPost(pathutil.BuildPath(fmt.Sprintf("/dashboard/backups/%s/edit", backup.ID))),
-				htmx.HxDisabledELT("find button"),
-				nodx.Class("space-y-2 text-base"),
+	return nodx.FormEl(
+		htmx.HxPost(pathutil.BuildPath(fmt.Sprintf("/dashboard/backups/%s/edit", backup.ID))),
+		htmx.HxDisabledELT("find button"),
+		nodx.Class("space-y-2 text-base"),
 
-				alpine.XData(`{
+		alpine.XData(`{
 					is_local: ` + fmt.Sprintf("%v", backup.IsLocal) + `,
 				}`),
 
@@ -281,6 +297,66 @@ func editBackupModal(
 					nodx.Class("pt-4"),
 					nodx.Div(
 						nodx.Class("flex justify-start items-center space-x-1"),
+						component.H2Text("File management"),
+					),
+					nodx.Div(
+						nodx.Class("mt-2 grid grid-cols-2 gap-2"),
+						component.SelectControl(component.SelectControlParams{
+							Name:     "compression_level",
+							Label:    "Compression level",
+							Required: false,
+							HelpText: "ZIP compression level. Default is best compression",
+							Children: []nodx.Node{
+								nodx.Option(
+									nodx.Value(""),
+									nodx.Text("Default (best)"),
+									nodx.If(!backup.CompressionLevel.Valid, nodx.Selected("")),
+								),
+								nodx.Option(
+									nodx.Value("9"),
+									nodx.Text("Best (9)"),
+									nodx.If(backup.CompressionLevel.Valid && backup.CompressionLevel.Int16 == 9, nodx.Selected("")),
+								),
+								nodx.Option(
+									nodx.Value("6"),
+									nodx.Text("Balanced (6)"),
+									nodx.If(backup.CompressionLevel.Valid && backup.CompressionLevel.Int16 == 6, nodx.Selected("")),
+								),
+								nodx.Option(
+									nodx.Value("1"),
+									nodx.Text("Fastest (1)"),
+									nodx.If(backup.CompressionLevel.Valid && backup.CompressionLevel.Int16 == 1, nodx.Selected("")),
+								),
+								nodx.Option(
+									nodx.Value("0"),
+									nodx.Text("None (store only)"),
+									nodx.If(backup.CompressionLevel.Valid && backup.CompressionLevel.Int16 == 0, nodx.Selected("")),
+								),
+							},
+						}),
+						component.InputControl(component.InputControlParams{
+							Name:        "max_part_size_mb",
+							Label:       "Max part size (MB)",
+							Placeholder: "Leave empty for single file",
+							Required:    false,
+							Type:        component.InputTypeNumber,
+							HelpText:    "Split backup into parts of this size. Leave empty to keep as a single file",
+							Children: []nodx.Node{
+								nodx.Min("1"),
+								nodx.Max("10000"),
+								nodx.If(
+									backup.MaxPartSizeMb.Valid,
+									nodx.Value(strconv.Itoa(int(backup.MaxPartSizeMb.Int32))),
+								),
+							},
+						}),
+					),
+				),
+
+				nodx.Div(
+					nodx.Class("pt-4"),
+					nodx.Div(
+						nodx.Class("flex justify-start items-center space-x-1"),
 						component.H2Text("Options"),
 						component.HelpButtonModal(component.HelpButtonModalParams{
 							ModalTitle: "Backup options",
@@ -356,11 +432,5 @@ func editBackupModal(
 						lucide.Save(),
 					),
 				),
-			),
-		},
-	})
-
-	return nodx.Div(
-		mo.HTML,
 	)
 }

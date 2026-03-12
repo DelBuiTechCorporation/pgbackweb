@@ -1,12 +1,40 @@
 package backups
 
 import (
+	"database/sql"
+	"strconv"
 	"time"
 
 	"github.com/eduardolat/pgbackweb/internal/view/web/component"
 	nodx "github.com/nodxdev/nodxgo"
 	lucide "github.com/nodxdev/nodxgo-lucide"
 )
+
+// parseNullInt32 parses an optional form string into a sql.NullInt32.
+// Empty string or non-positive value returns a null (invalid) result.
+func parseNullInt32(s string) sql.NullInt32 {
+	if s == "" {
+		return sql.NullInt32{}
+	}
+	v, err := strconv.ParseInt(s, 10, 32)
+	if err != nil || v <= 0 {
+		return sql.NullInt32{}
+	}
+	return sql.NullInt32{Int32: int32(v), Valid: true}
+}
+
+// parseNullInt16 parses an optional form string into a sql.NullInt16.
+// Empty string returns a null (invalid) result.
+func parseNullInt16(s string) sql.NullInt16 {
+	if s == "" {
+		return sql.NullInt16{}
+	}
+	v, err := strconv.ParseInt(s, 10, 16)
+	if err != nil {
+		return sql.NullInt16{}
+	}
+	return sql.NullInt16{Int16: int16(v), Valid: true}
+}
 
 func localBackupsHelp() []nodx.Node {
 	return []nodx.Node{
