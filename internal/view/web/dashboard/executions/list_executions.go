@@ -16,15 +16,19 @@ import (
 	"github.com/eduardolat/pgbackweb/internal/view/web/respondhtmx"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	alpine "github.com/nodxdev/nodxgo-alpine"
 	nodx "github.com/nodxdev/nodxgo"
 	htmx "github.com/nodxdev/nodxgo-htmx"
+	lucide "github.com/nodxdev/nodxgo-lucide"
 )
 
 type listExecsQueryData struct {
-	Database    uuid.UUID `query:"database" validate:"omitempty,uuid"`
-	Destination uuid.UUID `query:"destination" validate:"omitempty,uuid"`
-	Backup      uuid.UUID `query:"backup" validate:"omitempty,uuid"`
-	Page        int       `query:"page" validate:"required,min=1"`
+	Database     uuid.UUID `query:"database" validate:"omitempty,uuid"`
+	Destination  uuid.UUID `query:"destination" validate:"omitempty,uuid"`
+	Backup       uuid.UUID `query:"backup" validate:"omitempty,uuid"`
+	Page         int       `query:"page" validate:"required,min=1"`
+	GroupBy      string    `query:"group_by" validate:"omitempty,oneof=day month year backup"`
+	LastGroupKey string    `query:"last_group_key"`
 }
 
 func (h *handlers) listExecutionsHandler(c echo.Context) error {
@@ -62,6 +66,57 @@ func (h *handlers) listExecutionsHandler(c echo.Context) error {
 	)
 }
 
+func execGroupKey(execution dbgen.ExecutionsServicePaginateExecutionsRow, groupBy string) string {
+	switch groupBy {
+	case "day":
+		return execution.StartedAt.Local().Format("2006-01-02")
+	case "month":
+		return execution.StartedAt.Local().Format("2006-01")
+	case "year":
+		return execution.StartedAt.Local().Format("2006")
+	case "backup":
+		return execution.BackupID.String()
+	}
+	return ""
+}
+
+func execGroupLabel(execution dbgen.ExecutionsServicePaginateExecutionsRow, groupBy string) string {
+	switch groupBy {
+	case "day":
+		return execution.StartedAt.Local().Format("Monday, January 02, 2006")
+	case "month":
+		return execution.StartedAt.Local().Format("January 2006")
+	case "year":
+		return execution.StartedAt.Local().Format("2006")
+	case "backup":
+		return execution.BackupName
+	}
+	return ""
+}
+
+func execGroupHeaderTr(key, label string) nodx.Node {
+	return nodx.Tr(
+		nodx.Class("cursor-pointer select-none hover:opacity-80"),
+		alpine.XOn("click", fmt.Sprintf("groups['%s']=!groups['%s']", key, key)),
+		nodx.Td(
+			nodx.Attr("colspan", "9"),
+			nodx.Class("bg-base-300 border-y border-base-content/10 py-2 px-4"),
+			nodx.Div(
+				nodx.Class("flex items-center gap-2 font-semibold text-sm"),
+				nodx.SpanEl(
+					nodx.Class("inline-block"),
+					alpine.XBind("style", fmt.Sprintf(
+						`'transition:transform 0.2s;transform:' + (groups['%s'] ? 'rotate(-90deg)' : 'rotate(0deg)')`,
+						key,
+					)),
+					lucide.ChevronDown(),
+				),
+				nodx.SpanEl(nodx.Text(label)),
+			),
+		),
+	)
+}
+
 func listExecutions(
 	queryData listExecsQueryData,
 	pagination paginateutil.PaginateResponse,
@@ -74,9 +129,17 @@ func listExecutions(
 		})
 	}
 
+	currentGroup := queryData.LastGroupKey
 	trs := []nodx.Node{}
 	for _, execution := range executions {
+		groupKey := execGroupKey(execution, queryData.GroupBy)
+		if groupKey != "" && groupKey != currentGroup {
+			trs = append(trs, execGroupHeaderTr(groupKey, execGroupLabel(execution, queryData.GroupBy)))
+			currentGroup = groupKey
+		}
+
 		trs = append(trs, nodx.Tr(
+			nodx.If(queryData.GroupBy != "" && groupKey != "", alpine.XShow(fmt.Sprintf("!groups['%s']", groupKey))),
 			nodx.Td(component.OptionsDropdown(
 				showExecutionButton(execution),
 				restoreExecutionButton(execution),
@@ -116,6 +179,10 @@ func listExecutions(
 	}
 
 	if pagination.HasNextPage {
+		lastGroupKey := ""
+		if len(executions) > 0 {
+			lastGroupKey = execGroupKey(executions[len(executions)-1], queryData.GroupBy)
+		}
 		trs = append(trs, nodx.Tr(
 			htmx.HxGet(func() string {
 				url := pathutil.BuildPath("/dashboard/executions/list")
@@ -128,6 +195,10 @@ func listExecutions(
 				}
 				if queryData.Backup != uuid.Nil {
 					url = strutil.AddQueryParamToUrl(url, "backup", queryData.Backup.String())
+				}
+				if queryData.GroupBy != "" {
+					url = strutil.AddQueryParamToUrl(url, "group_by", queryData.GroupBy)
+					url = strutil.AddQueryParamToUrl(url, "last_group_key", lastGroupKey)
 				}
 				return url
 			}()),
